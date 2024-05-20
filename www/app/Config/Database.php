@@ -24,31 +24,7 @@ class Database extends Config
      *
      * @var array<string, mixed>
      */
-    public array $default = [
-        'DSN'          => '',
-        'hostname'     => 'localhost',
-        'username'     => 'cicrm',
-        'password'     => 'yYa]su5p7Mu[KdTJ',
-        'database'     => 'cicrm',
-        'DBDriver'     => 'MySQLi',
-        'DBPrefix'     => '',
-        'pConnect'     => false,
-        'DBDebug'      => true,
-        'charset'      => 'utf8mb4',
-        'DBCollat'     => 'utf8mb4_general_ci',
-        'swapPre'      => '',
-        'encrypt'      => false,
-        'compress'     => false,
-        'strictOn'     => false,
-        'failover'     => [],
-        'port'         => 3306,
-        'numberNative' => false,
-        'dateFormat'   => [
-            'date'     => 'Y-m-d',
-            'datetime' => 'Y-m-d H:i:s',
-            'time'     => 'H:i:s',
-        ],
-    ];
+    public array $default = [];
 
     //    /**
     //     * Sample database connection for SQLite3.
@@ -191,6 +167,31 @@ class Database extends Config
     {
         parent::__construct();
 
+        $this->default = [
+            'DSN'          => '',
+            'hostname'     => env('database.default.hostname', 'localhost'),
+            'username'     => env('database.default.username', 'root'),
+            'password'     => env('database.default.password', ''),
+            'database'     => env('database.default.database', 'my_database'),
+            'DBDriver'     => env('database.default.DBDriver', 'MySQLi'),
+            'DBPrefix'     => env('database.default.DBPrefix', ''),
+            'pConnect'     => false,
+            'DBDebug'      => true,
+            'charset'      => 'utf8mb4',
+            'DBCollat'     => 'utf8mb4_general_ci',
+            'swapPre'      => '',
+            'encrypt'      => false,
+            'compress'     => false,
+            'strictOn'     => false,
+            'failover'     => [],
+            'port'         => 3306,
+            'numberNative' => false,
+            'dateFormat'   => [
+                'date'     => 'Y-m-d',
+                'datetime' => 'Y-m-d H:i:s',
+                'time'     => 'H:i:s',
+            ],
+        ];
         // Ensure that we always set the database group to 'tests' if
         // we are currently running an automated test suite, so that
         // we don't overwrite live data on accident.

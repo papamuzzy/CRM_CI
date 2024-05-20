@@ -4,10 +4,9 @@ namespace Config;
 
 use CodeIgniter\Config\BaseConfig;
 
-class Email extends BaseConfig
-{
-    public string $fromEmail  = 'papamuzzy@gmail.com';
-    public string $fromName   = 'CI CRM';
+class Email extends BaseConfig {
+    public string $fromEmail = '';
+    public string $fromName = '';
     public string $recipients = '';
 
     /**
@@ -118,4 +117,18 @@ class Email extends BaseConfig
      * Enable notify message from server
      */
     public bool $DSN = false;
+
+    public function __construct() {
+        parent::__construct();
+
+        $this->fromEmail = env('email.fromEmail', 'default-email@example.com');
+        $this->fromName = env('email.fromName', 'Default Name');
+        $this->userAgent = env('email.userAgent', 'CodeIgniter');
+        $this->protocol = env('email.protocol', 'smtp');
+        $this->SMTPHost = env('email.SMTPHost', 'smtp.example.com');
+        $this->SMTPUser = env('email.SMTPUser', 'user@example.com');
+        $this->SMTPPass = env('email.SMTPPass', 'default_password');
+        $this->SMTPPort = env('email.SMTPPort', 587);
+        $this->SMTPCrypto = env('email.SMTPCrypto', 'tls');
+    }
 }
