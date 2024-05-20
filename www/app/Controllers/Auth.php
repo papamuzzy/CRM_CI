@@ -4,41 +4,79 @@ use CodeIgniter\Controller;
 use App\Models\User;
 
 class Auth extends Controller {
-    public function register(): string {
-        return view('register');
+    /**
+     * @var \App\Models\User
+     */
+    private User $userModel;
+
+    public function __construct()
+    {
+        // Загружаем модель пользователя
+        $this->userModel = new User();
     }
 
-    /**
-     * @throws \ReflectionException
-     */
-    public function register_post(): string {
-        $userModel = new User();
-
-        $email = $this->request->getPost('email');
-        $existingUser = $userModel->where('email', $email)->first();
-
-        if ($existingUser) {
-            return view('register', ['error' => 'Email already exists.']);
+    public function register(): string {
+        if (! $this->request->is('post')) {
+            return view('register');
         }
 
-        $verification_code = md5(rand());
-        $verification_expires = date('Y-m-d H:i:s', strtotime('+1 hour')); // Срок действия 1 час
+        $rules = [
+            'company' => 'required|max_length[100]',
+            'first_name' => [
+                'rules' => 'required|alpha|min_length[3]|max_length[12]',
+                'errors' => [
+                    'required' => 'First name is required',
+                    'alpha' => 'First name must contain only alphabetic characters',
+                    'min_length' => 'First name must be at least 3 characters long',
+                    'max_length' => 'First name cannot exceed 12 characters'
+                ]
+            ],
+            'last_name' => 'required|alpha|min_length[3]|max_length[12]',
+            'email' => [
+                'rules' => 'required|valid_email|is_unique[users.email]',
+                'errors' => [
+                    'required' => 'Email is required',
+                    'valid_email' => 'Email must be valid',
+                    'is_unique' => 'Email already exists',
+                ]
 
-        $data = [
-            'company'       => $this->request->getPost('company'),
-            'first_name'    => $this->request->getPost('first_name'),
-            'last_name'     => $this->request->getPost('last_name'),
-            'email'         => $this->request->getPost('email'),
-            'verified'      => 0,
-            'token'         => $verification_code,
-            'token_type'    => 'register',
-            'token_expires' => $verification_expires,
+            ]
         ];
 
-        $userModel->save($data);
-        $this->_send_verification_email($data['email'], $data['token']);
+        if (!$this->validate($rules)) {
+            // Если валидация не прошла, возвращаемся к форме с ошибками
+            return view('register', [
+                'validation' => $this->validator
+            ]);
+        } else {
+            $userModel = new User();
 
-        return view('check_email');
+            $email = $this->request->getPost('email');
+            $existingUser = $userModel->where('email', $email)->first();
+
+            if ($existingUser) {
+                return view('register', ['error' => 'Email already exists.']);
+            }
+
+            $verification_code = md5(rand());
+            $verification_expires = date('Y-m-d H:i:s', strtotime('+1 hour')); // Срок действия 1 час
+
+            $data = [
+                'company'       => $this->request->getPost('company'),
+                'first_name'    => $this->request->getPost('first_name'),
+                'last_name'     => $this->request->getPost('last_name'),
+                'email'         => $this->request->getPost('email'),
+                'verified'      => 0,
+                'token'         => $verification_code,
+                'token_type'    => 'register',
+                'token_expires' => $verification_expires,
+            ];
+
+            $userModel->save($data);
+            $this->_send_verification_email($data['email'], $data['token']);
+
+            return view('check_email');
+        }
     }
 
     private function _send_verification_email($email, $verification_code): void {

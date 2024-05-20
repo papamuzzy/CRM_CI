@@ -1,14 +1,49 @@
-# Disable directory browsing
+Options +SymLinksIfOwnerMatch
 Options -Indexes
 
-# ----------------------------------------------------------------------
-# Rewrite engine
-# ----------------------------------------------------------------------
+require valid-user
+Authname "Basic Auth"
+Authtype Basic
+AuthUserFile "/home/zb217839/web-dev-project.com/fbccm/.htpasswd"
 
-# Turning on the rewrite engine is necessary for the following rules and features.
-# FollowSymLinks must be enabled for this to work.
+<FilesMatch ".(htaccess|htpasswd)$">
+Order Allow,Deny
+Deny from all
+</FilesMatch>
+
+RewriteRule ^(.*/)?\.git+ - [F,L]
+ErrorDocument 403 "Access Forbidden"
+
+RewriteRule ^db_dumps/?$ - [F,L]
+ErrorDocument 403 "Access Forbidden"
+
+RewriteRule ^cache/?$ - [F,L]
+ErrorDocument 403 "Access Forbidden"
+
+RewriteRule ^vendor/?$ - [F,L]
+ErrorDocument 403 "Access Forbidden"
+
+RewriteRule ^migrations/?$ - [F,L]
+ErrorDocument 403 "Access Forbidden"
+
+RewriteRule ^/?composer\.json$ - [F,L]
+ErrorDocument 403 "Access Forbidden"
+
+<ifModule mod_headers.c>
+	#Header set Cache-Control "no-cache, no-store"
+	#Header set Strict-Transport-Security "max-age=31536000" env=HTTPS
+	#Header set Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" env=HTTPS
+
+	Header set Content-Security-Policy "default-src 'self'; script-src https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://code.jquery.com 'self' 'unsafe-inline' 'unsafe-eval'; object-src 'self'; img-src 'self' data: blob:; frame-src 'self'; style-src https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://fonts.googleapis.com 'self' 'unsafe-inline'; font-src https://fonts.gstatic.com  'self' data:; frame-ancestors 'none'; base-uri 'self'; form-action 'self';"
+
+	Header set X-XSS-Protection "1; mode=block"
+	Header set X-Frame-Options "DENY"
+	Header set X-Content-Type-Options "nosniff"
+	#Header set Referrer-Policy "same-origin"
+	Header set Feature-Policy "geolocation 'self'"
+</ifModule>
+
 <IfModule mod_rewrite.c>
-	Options +FollowSymlinks
 	RewriteEngine On
 
 	# If you installed CodeIgniter in a subfolder, you will need to
@@ -37,13 +72,3 @@ Options -Indexes
 	RewriteCond %{HTTP:Authorization} .
 	RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
 </IfModule>
-
-<IfModule !mod_rewrite.c>
-	# If we don't have mod_rewrite installed, all 404's
-	# can be sent to index.php, and everything works as normal.
-	ErrorDocument 404 index.php
-</IfModule>
-
-# Disable server signature start
-ServerSignature Off
-# Disable server signature end

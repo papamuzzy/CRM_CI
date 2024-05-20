@@ -5,11 +5,13 @@
 </head>
 <body>
 <h2>Register</h2>
-<?php if (isset($error)): ?>
-    <p style="color:red;"><?= $error ?></p>
+<?php if (isset($error) || isset($validation)): ?>
+<div style="color:red;">
+    <?= ((isset($validation)) ? $validation->listErrors() : $error) ?>
+</div>
 <?php endif; ?>
-<form method="post" action="<?= base_url('auth/register_post') ?>">
-    <label>Company:</label><br>
+<form method="post">
+    <label>Company name:</label><br>
     <input type="text" name="company" required><br>
     <label>First Name:</label><br>
     <input type="text" name="first_name" required><br>
