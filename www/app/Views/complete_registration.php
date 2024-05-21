@@ -5,19 +5,20 @@
 </head>
 <body>
 <h2>Complete Registration</h2>
-<?php if (isset($error)): ?>
-    <p style="color:red;"><?= $error ?></p>
+<?php if (isset($validation) || isset($error)): ?>
+    <p style="color:red;"><?= ((isset($validation)) ? $validation->listErrors() : $error); ?></p>
 <?php endif; ?>
 <form method="post" action="<?= base_url('auth/complete_registration_post') ?>">
-    <input type="hidden" name="verification_code" value="<?= $verification_code ?>">
+    <input type="hidden" name="verification_code" value="<?= $form_data['verification_code'] ?>">
     <label>First Name:</label><br>
-    <input type="text" name="first_name" value="<?= $first_name ?>" readonly><br>
+    <input type="text" name="first_name" value="<?= $form_data['first_name'] ?>" readonly><br>
     <label>Last Name:</label><br>
-    <input type="text" name="last_name" value="<?= $last_name ?>" readonly><br>
+    <input type="text" name="last_name" value="<?= $form_data['last_name'] ?>" readonly><br>
     <label>Email:</label><br>
-    <input type="email" name="email" value="<?= $email ?>" readonly><br>
+    <input type="email" name="email" value="<?= $form_data['email'] ?>" readonly><br>
     <label>Phone:</label><br>
-    <input type="text" name="phone" required><br>
+    <input type="text" name="phone"
+           required<?= ((!empty($form_data['phone'])) ? ' value="' . $form_data['phone'] . '"' : '') ?>><br>
     <label>Password:</label><br>
     <input type="password" name="password" required><br>
     <label>Confirm Password:</label><br>

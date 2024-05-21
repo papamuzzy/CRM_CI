@@ -1,5 +1,6 @@
 <?php namespace App\Controllers;
 
+use App\Libraries\UniqueChecker;
 use CodeIgniter\Controller;
 use App\Models\User;
 
@@ -8,61 +9,91 @@ class Auth extends Controller {
      * @var \App\Models\User
      */
     private User $userModel;
+    private UniqueChecker $uniqueChecker;
 
-    public function __construct()
-    {
+    public function __construct() {
         // Загружаем модель пользователя
         $this->userModel = new User();
+        $this->uniqueChecker = new UniqueChecker();
     }
 
     public function register(): string {
-        if (! $this->request->is('post')) {
-            return view('register');
+        helper(['form']);
+
+        $template = "register_account";
+
+        $data_page = [
+            'title'       => lang('Loginauth.titleLoginRegister') . " - " . lang('Loginauth.defSignTitle'),
+            'description' => lang('Loginauth.descriptionLoginRegister') . " - " . lang('Loginauth.defSignTitle'),
+            'form_anchor' => base_url('auth/register'),
+        ];
+
+        if (!$this->request->is('post')) {
+            return view('loginauth/templates/' . $template, $data_page);
         }
 
         $rules = [
-            'company' => 'required|max_length[100]',
-            'first_name' => [
-                'rules' => 'required|alpha|min_length[3]|max_length[12]',
+            'сompany_name' => [
+                'rules'  => 'required|min_length[2]|max_length[100]',
                 'errors' => [
-                    'required' => 'First name is required',
-                    'alpha' => 'First name must contain only alphabetic characters',
-                    'min_length' => 'First name must be at least 3 characters long',
-                    'max_length' => 'First name cannot exceed 12 characters'
-                ]
+                    'required'   => 'Company name is required',
+                    'min_length' => 'Company name must be at least 2 characters long',
+                    'max_length' => 'Company name cannot exceed 100 characters',
+                ],
             ],
-            'last_name' => 'required|alpha|min_length[3]|max_length[12]',
-            'email' => [
-                'rules' => 'required|valid_email|is_unique[users.email]',
+            'first_name'   => [
+                'rules'  => 'required|alpha|min_length[3]|max_length[12]',
                 'errors' => [
-                    'required' => 'Email is required',
+                    'required'   => 'First name is required',
+                    'alpha'      => 'First name must contain only alphabetic characters',
+                    'min_length' => 'First name must be at least 3 characters long',
+                    'max_length' => 'First name cannot exceed 12 characters',
+                ],
+            ],
+            'last_name'    => [
+                'rules'  => 'required|alpha|min_length[3]|max_length[12]',
+                'errors' => [
+                    'required'   => 'Last name is required',
+                    'alpha'      => 'Last name must contain only alphabetic characters',
+                    'min_length' => 'Last name must be at least 3 characters long',
+                    'max_length' => 'Last name cannot exceed 12 characters',
+                ],
+            ],
+            'email'        => [
+                //'rules'  => 'required|valid_email|is_unique[users.email]',
+                'rules'  => 'required|valid_email',
+                'errors' => [
+                    'required'    => 'Email is required',
                     'valid_email' => 'Email must be valid',
-                    'is_unique' => 'Email already exists',
-                ]
+                    //'is_unique'   => 'Email already exists',
+                ],
 
-            ]
+            ],
         ];
 
         if (!$this->validate($rules)) {
             // Если валидация не прошла, возвращаемся к форме с ошибками
-            return view('register', [
-                'validation' => $this->validator
-            ]);
+
+            $data_page['validation'] = $this->validator;
+            $data_page['form_data'] = $this->request->getPost();
+
+            return view('loginauth/templates/' . $template, $data_page);
         } else {
-            $userModel = new User();
+            $res = $this->uniqueChecker->checkUnique($this->userModel, $this->request->getPost(), ['email',]);
+            if (!$res['email']) {
+                $data_page['error'] = 'Email already exists';
+                $data_page['form_data'] = $this->request->getPost();
 
-            $email = $this->request->getPost('email');
-            $existingUser = $userModel->where('email', $email)->first();
-
-            if ($existingUser) {
-                return view('register', ['error' => 'Email already exists.']);
+                return view('loginauth/templates/' . $template, $data_page);
             }
+
+            $template = "check_email";
 
             $verification_code = md5(rand());
             $verification_expires = date('Y-m-d H:i:s', strtotime('+1 hour')); // Срок действия 1 час
 
             $data = [
-                'company'       => $this->request->getPost('company'),
+                'company'       => $this->request->getPost('сompany_name'),
                 'first_name'    => $this->request->getPost('first_name'),
                 'last_name'     => $this->request->getPost('last_name'),
                 'email'         => $this->request->getPost('email'),
@@ -72,10 +103,11 @@ class Auth extends Controller {
                 'token_expires' => $verification_expires,
             ];
 
-            $userModel->save($data);
+            $this->userModel->save($data);
             $this->_send_verification_email($data['email'], $data['token']);
 
-            return view('check_email');
+            return view('loginauth/templates/' . $template, $data_page);
+            //return view('check_email');
         }
     }
 
@@ -96,21 +128,21 @@ class Auth extends Controller {
      * @throws \ReflectionException
      */
     public function verify($verification_code) {
-        $userModel = new User();
-        $user = $userModel->where('token', $verification_code)->first();
+        $user = $this->userModel->where('token', $verification_code)->first();
 
         if ($user) {
             $current_time = date('Y-m-d H:i:s');
             if ($current_time < $user['token_expires']) {
-                $userModel->update($user['id'], ['verified' => 1]);
-                return view('complete_registration', [
+                $this->userModel->update($user['id'], ['verified' => 1]);
+                $data_page['form_data'] = [
                     'first_name'        => $user['first_name'],
                     'last_name'         => $user['last_name'],
                     'email'             => $user['email'],
                     'verification_code' => $verification_code,
-                ]);
+                ];
+                return view('complete_registration', $data_page);
             } else {
-                return view('register', ['error' => 'Verification code has expired. Please register again.']);
+                return view('loginauth/templates/register_account', ['error' => 'Verification code has expired. Please register again.']);
             }
         } else {
             echo 'Invalid verification code';
@@ -118,19 +150,56 @@ class Auth extends Controller {
     }
 
     public function complete_registration_post(): string {
-        $userModel = new User();
         $verification_code = $this->request->getPost('verification_code');
-        $user = $userModel->where('token', $verification_code)->first();
+        $user = $this->userModel->where('token', $verification_code)->first();
 
         if ($user && strtotime($user['token_expires']) > time()) {
-            $phone = $this->request->getPost('phone');
-            $password = $this->request->getPost('password');
-            $confirm_password = $this->request->getPost('confirm_password');
+            $rules = [
+                'phone'            => [
+                    'rules'  => 'required|min_length[12]|max_length[15]|numeric',
+                    'errors' => [
+                        'required'   => 'Phone is required',
+                        'min_length' => 'Phone must be at least 12 characters long',
+                        'max_length' => 'Phone cannot exceed 15 characters',
+                        'numeric'    => 'Phone must be a number',
+                    ],
+                ],
+                'password'         => [
+                    'rules'  => 'required|min_length[8]|max_length[12]',
+                    'errors' => [
+                        'required'   => 'Password is required',
+                        'min_length' => 'Password must be at least 8 characters long',
+                        'max_length' => 'Password cannot exceed 12 characters',
+                    ],
+                ],
+                'confirm_password' => [
+                    'rules'  => 'required|min_length[8]|max_length[12]|matches[password]',
+                    'errors' => [
+                        'required'   => 'Confirm Password is required',
+                        'min_length' => 'Confirm Password must be at least 8 characters long',
+                        'max_length' => 'Confirm Password cannot exceed 12 characters',
+                        'matches'    => 'Confirm Password does not match with Password',
+                    ],
+                ],
+            ];
 
-            if ($password === $confirm_password) {
-                $userModel->update($user['id'], [
-                    'phone'         => $phone,
-                    'password'      => password_hash($password, PASSWORD_DEFAULT),
+            if (!$this->validate($rules)) {
+                $data_page['validation'] = $this->validator;
+                $data_page['form_data'] = $this->request->getPost();
+
+                return view('complete_registration', $data_page);
+            } else {
+                $res = $this->uniqueChecker->checkUnique($this->userModel, $this->request->getPost(), ['phone',]);
+                if (!$res['phone']) {
+                    $data_page['error'] = 'Phone number already exists';
+                    $data_page['form_data'] = $this->request->getPost();
+
+                    return view('complete_registration', $data_page);
+                }
+
+                $this->userModel->update($user['id'], [
+                    'phone'         => $this->request->getPost('phone'),
+                    'password'      => password_hash($this->request->getPost('password'), PASSWORD_DEFAULT),
                     'verified'      => 1,
                     'token'         => null,
                     'token_type'    => null,
@@ -138,17 +207,9 @@ class Auth extends Controller {
                 ]);
 
                 return view('welcome');
-            } else {
-                return view('complete_registration', [
-                    'first_name'        => $user['first_name'],
-                    'last_name'         => $user['last_name'],
-                    'email'             => $user['email'],
-                    'verification_code' => $verification_code,
-                    'error'             => 'Passwords do not match.',
-                ]);
             }
         } else {
-            return view('register', ['error' => 'Invalid or expired verification code.']);
+            return view('loginauth/templates/register_account', ['error' => 'Invalid or expired verification code.']);
         }
     }
 
@@ -162,12 +223,10 @@ class Auth extends Controller {
     }
 
     public function login_post(): string {
-        $userModel = new User();
-
         $email = $this->request->getPost('email');
         $password = $this->request->getPost('password');
 
-        $user = $userModel->where('email', $email)->first();
+        $user = $this->userModel->where('email', $email)->first();
 
         if ($user && password_verify($password, $user['password']) && $user['verified']) {
             return view('welcome');
@@ -181,15 +240,14 @@ class Auth extends Controller {
     }
 
     public function send_password_reset_email(): string {
-        $userModel = new User();
         $email = $this->request->getPost('email');
-        $user = $userModel->where('email', $email)->first();
+        $user = $this->userModel->where('email', $email)->first();
 
         if ($user) {
             $verification_code = md5(rand());
             $verification_expires = date('Y-m-d H:i:s', strtotime('+1 hour')); // Срок действия 1 час
 
-            $userModel->update($user['id'], [
+            $this->userModel->update($user['id'], [
                 'token'         => $verification_code,
                 'token_type'    => 'reset',
                 'token_expires' => $verification_expires,
@@ -210,8 +268,7 @@ class Auth extends Controller {
     }
 
     public function reset_password($verification_code): string {
-        $userModel = new User();
-        $user = $userModel->where('token', $verification_code)->first();
+        $user = $this->userModel->where('token', $verification_code)->first();
 
         if ($user && strtotime($user['token_expires']) > time()) {
             return view('reset_password', ['email' => $user['email'], 'verification_code' => $verification_code]);
@@ -221,16 +278,15 @@ class Auth extends Controller {
     }
 
     public function reset_password_post(): string {
-        $userModel = new User();
         $verification_code = $this->request->getPost('verification_code');
-        $user = $userModel->where('token', $verification_code)->first();
+        $user = $this->userModel->where('token', $verification_code)->first();
 
         if ($user && strtotime($user['token_expires']) > time()) {
             $new_password = $this->request->getPost('new_password');
             $confirm_password = $this->request->getPost('confirm_password');
 
             if ($new_password === $confirm_password) {
-                $userModel->update($user['id'], [
+                $this->userModel->update($user['id'], [
                     'password'      => password_hash($new_password, PASSWORD_DEFAULT),
                     'token'         => null,
                     'token_type'    => null,
