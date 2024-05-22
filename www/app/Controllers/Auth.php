@@ -21,20 +21,24 @@ class Auth extends Controller {
         helper(['form']);
 
         $template = "register_account";
+        $get_form_post = false;
 
         $data_page = [
             'title'       => lang('Loginauth.titleLoginRegister') . " - " . lang('Loginauth.defSignTitle'),
             'description' => lang('Loginauth.descriptionLoginRegister') . " - " . lang('Loginauth.defSignTitle'),
-            'form_anchor' => base_url('auth/register'),
+            'form_anchor' => base_url('auth/register')
         ];
 
         if (!$this->request->is('post')) {
             return view('loginauth/templates/' . $template, $data_page);
         }
 
+        $validation = \Config\Services::validation();
+
         $rules = [
             'сompany_name' => [
-                'rules'  => 'required|min_length[2]|max_length[100]',
+                'label' => 'Company Name',
+                'rules'  => 'required|string|min_length[2]|max_length[300]',
                 'errors' => [
                     'required'   => 'Company name is required',
                     'min_length' => 'Company name must be at least 2 characters long',
@@ -42,57 +46,72 @@ class Auth extends Controller {
                 ],
             ],
             'first_name'   => [
-                'rules'  => 'required|alpha|min_length[3]|max_length[12]',
+                'label' => 'First name',
+                'rules'  => 'required|alpha_numeric_space|min_length[3]|max_length[150]',
                 'errors' => [
                     'required'   => 'First name is required',
                     'alpha'      => 'First name must contain only alphabetic characters',
                     'min_length' => 'First name must be at least 3 characters long',
-                    'max_length' => 'First name cannot exceed 12 characters',
+                    'max_length' => 'First name cannot exceed 50 characters',
                 ],
             ],
             'last_name'    => [
-                'rules'  => 'required|alpha|min_length[3]|max_length[12]',
+                'label' => 'Last name',
+                'rules'  => 'required|alpha_numeric_space|min_length[3]|max_length[150]',
                 'errors' => [
                     'required'   => 'Last name is required',
                     'alpha'      => 'Last name must contain only alphabetic characters',
                     'min_length' => 'Last name must be at least 3 characters long',
-                    'max_length' => 'Last name cannot exceed 12 characters',
+                    'max_length' => 'Last name cannot exceed 50 characters',
                 ],
             ],
             'email'        => [
                 //'rules'  => 'required|valid_email|is_unique[users.email]',
-                'rules'  => 'required|valid_email',
+                'label' => 'Email',
+                'rules'  => 'required|valid_email|max_length[250]',
                 'errors' => [
                     'required'    => 'Email is required',
                     'valid_email' => 'Email must be valid',
                     //'is_unique'   => 'Email already exists',
                 ],
-
-            ],
+            ]
         ];
 
-        if (!$this->validate($rules)) {
+        $get_form_post = $this->request->getPost(null, FILTER_SANITIZE_FULL_SPECIAL_CHARS);
+        //$get_form_post = $this->request->getPost();
+
+        //if (!$this->validate($rules)) {
+        if (!$this->validateData($get_form_post, $rules)) {
             // Если валидация не прошла, возвращаемся к форме с ошибками
 
-            $data_page['validation'] = $this->validator;
-            $data_page['form_data'] = $this->request->getPost();
+            //$data_page['validation'] = $this->validator;
+            $data_page['validation'] = $validation->getErrors();
+            $data_page['form_data'] = $get_form_post;
 
             return view('loginauth/templates/' . $template, $data_page);
         } else {
-            $res = $this->uniqueChecker->checkUnique($this->userModel, $this->request->getPost(), ['email',]);
-            if (!$res['email']) {
-                $data_page['error'] = 'Email already exists';
-                $data_page['form_data'] = $this->request->getPost();
+
+            $get_form_post = $validation->getValidated();
+
+            if (empty($get_form_post) or !is_array($get_form_post)) {
+                $data_page['error'] = 'Data not found, try again.';
 
                 return view('loginauth/templates/' . $template, $data_page);
             }
 
-            $template = "check_email";
+            //$res = $this->uniqueChecker->checkUnique($this->userModel, $this->request->getPost(), ['email',]);
+            $res = $this->uniqueChecker->checkUnique($this->userModel, $get_form_post, ['email',]);
+            if (!$res['email']) {
+                $data_page['error'] = 'Email already exists';
+                $data_page['form_data'] = $get_form_post;
+
+                return view('loginauth/templates/' . $template, $data_page);
+            }
 
             $verification_code = md5(rand());
             $verification_expires = date('Y-m-d H:i:s', strtotime('+1 hour')); // Срок действия 1 час
 
-            $data = [
+            /*$data = [
                 'company'       => $this->request->getPost('сompany_name'),
                 'first_name'    => $this->request->getPost('first_name'),
                 'last_name'     => $this->request->getPost('last_name'),
@@ -101,38 +120,107 @@ class Auth extends Controller {
                 'token'         => $verification_code,
                 'token_type'    => 'register',
                 'token_expires' => $verification_expires,
+            ];*/
+
+            $data = [
+                'company'       => !empty($get_form_post['сompany_name']) ? $get_form_post['сompany_name'] : NULL,
+                'first_name'    => !empty($get_form_post['first_name']) ? $get_form_post['first_name'] : NULL,
+                'last_name'     => !empty($get_form_post['last_name']) ? $get_form_post['last_name'] : NULL,
+                'email'         => !empty($get_form_post['email']) ? $get_form_post['email'] : NULL,
+                'verified'      => 0,
+                'token'         => $verification_code,
+                'token_type'    => 'register',
+                'token_expires' => $verification_expires,
             ];
 
             $this->userModel->save($data);
-            $this->_send_verification_email($data['email'], $data['token']);
+            //$this->_send_verification_email($data['email'], $data['token']);
+
+            if ($this->_send_verification_email($get_form_post['first_name'], $get_form_post['email'], $data['token']) === true) {
+                $template = "check_email";
+                $data_page['success_msg'] = 'Check your email for a verification link'; 
+            } else {
+                $data_page['error'] = 'Something strange happened, try again in a few minutes.';    
+            }
 
             return view('loginauth/templates/' . $template, $data_page);
             //return view('check_email');
         }
     }
 
-    private function _send_verification_email($email, $verification_code): void {
-        $emailService = \Config\Services::email();
+    private function _send_verification_email($first_name, $email, $verification_code): bool {
 
-        $emailService->setFrom('papamuzzy@gmail.com', 'CI CRM');
+        if (empty($first_name) or empty($email)) return false;
+
+        $emailService = \Config\Services::email();
+        $emailService->clear(true);
+        $email_status = false;
+
+        $configemail['SMTPHost'] = 'mail.adm.tools';
+        $configemail['SMTPUser'] = 'fbccm@web-dev-project.com';
+        $configemail['SMTPPass'] = '6AnSnC3v52';
+        $configemail['SMTPPort'] = 465;
+        $configemail['SMTPTimeout'] = 30;
+        $configemail['mailType'] = 'html';
+        $configemail['validate'] = true;
+        $configemail['priority'] = 3;
+        $configemail['SMTPKeepAlive'] = false;
+        $configemail['SMTPCrypto'] = 'ssl';
+
+        $emailService->initialize($configemail);
+
+        $message = '
+            <p>Hi '.ucwords(strtolower($first_name)).'</p>
+            <p>Complete verification and continue registration, confirm your email address. <a href="'.base_url('auth/verify/' . $verification_code).'">Click this link to continue</a>.</p>
+        ';
+
+        $emailService->setFrom('fbccm@web-dev-project.com', 'FcCM test');
         $emailService->setTo($email);
 
         $emailService->setSubject('Email Verification');
-        $message = 'Please click this link to verify your email: ' . base_url() . '/auth/verify/' . $verification_code;
+        //$message = '<p>Please click this link to verify your email: <a href="'.base_url('auth/verify/' . $verification_code).'"></a></p>';
         $emailService->setMessage($message);
 
-        $emailService->send();
+        //$emailService->send();
+
+        if ($emailService->send()) {
+            return true;
+        }
+
+        /*if ($emailService->send(FALSE) === TRUE){
+            $email_status['status_send'] = true;
+        }else{
+            $email_status['status_send'] = false;
+            $email_status['log_send'] = $emailService->printDebugger(['headers']);
+        }*/
+
+        return false;
     }
 
     /**
      * @throws \ReflectionException
      */
     public function verify($verification_code) {
+
+        helper(['form']);
+
+        $data_page = [
+            'title'       => lang('Loginauth.titleLoginCreate') . " - " . lang('Loginauth.defSignTitle'),
+            'description' => lang('Loginauth.descriptionLoginCreate') . " - " . lang('Loginauth.defSignTitle')
+        ];
+
         $user = $this->userModel->where('token', $verification_code)->first();
+
+
+
+
+
 
         if ($user) {
             $current_time = date('Y-m-d H:i:s');
             if ($current_time < $user['token_expires']) {
+                $data_page['form_anchor'] = base_url('auth/complete-registration-post');
+
                 $this->userModel->update($user['id'], ['verified' => 1]);
                 $data_page['form_data'] = [
                     'first_name'        => $user['first_name'],
@@ -140,66 +228,231 @@ class Auth extends Controller {
                     'email'             => $user['email'],
                     'verification_code' => $verification_code,
                 ];
-                return view('complete_registration', $data_page);
+                return view('loginauth/templates/create_account', $data_page);
             } else {
-                return view('loginauth/templates/register_account', ['error' => 'Verification code has expired. Please register again.']);
+                $data_page['form_anchor'] = base_url('auth/register');
+                $data_page['error'] = 'Verification code has expired. Please register again.';
+                return view('loginauth/templates/register_account', $data_page);
             }
         } else {
-            echo 'Invalid verification code';
+            //echo 'Invalid verification code';
+            $data_page['form_anchor'] = base_url('auth/register');
+            $data_page['error'] = 'Invalid verification code';
+            return view('loginauth/templates/register_account', $data_page);
         }
+
+
+
+
     }
 
     public function complete_registration_post(): string {
+
+        helper(['form']);
+
+        $data_page = [
+            'title'       => lang('Loginauth.titleLoginCreate') . " - " . lang('Loginauth.defSignTitle'),
+            'description' => lang('Loginauth.descriptionLoginCreate') . " - " . lang('Loginauth.defSignTitle'),
+            'form_anchor' => base_url('auth/complete-registration-post')
+        ];
+
         $verification_code = $this->request->getPost('verification_code');
+
+        $get_form_post = false;
+        $template = "create_account";
+
+        /*if (!$this->request->is('post')) {
+            //return redirect()->to(base_url('auth/register')); 
+            return view('loginauth/templates/register_account', $data_page);
+        }*/
+
+        $validation = \Config\Services::validation();
+
         $user = $this->userModel->where('token', $verification_code)->first();
 
         if ($user && strtotime($user['token_expires']) > time()) {
             $rules = [
+
+
+                'first_name'   => [
+                    'label' => 'First name',
+                    'rules'  => 'required|alpha_numeric_space|min_length[3]|max_length[150]',
+                    'errors' => [
+                        'required'   => 'First name is required',
+                        'alpha'      => 'First name must contain only alphabetic characters',
+                        'min_length' => 'First name must be at least 3 characters long',
+                        'max_length' => 'First name cannot exceed 50 characters',
+                    ],
+                ],
+                'last_name'    => [
+                    'label' => 'Last name',
+                    'rules'  => 'required|alpha_numeric_space|min_length[3]|max_length[150]',
+                    'errors' => [
+                        'required'   => 'Last name is required',
+                        'alpha'      => 'Last name must contain only alphabetic characters',
+                        'min_length' => 'Last name must be at least 3 characters long',
+                        'max_length' => 'Last name cannot exceed 50 characters',
+                    ],
+                ],
+                'email'        => [
+                    //'rules'  => 'required|valid_email|is_unique[users.email]',
+                    'label' => 'Email',
+                    'rules'  => 'required|valid_email|max_length[250]',
+                    'errors' => [
+                        'required'    => 'Email is required',
+                        'valid_email' => 'Email must be valid',
+                        //'is_unique'   => 'Email already exists',
+                    ],
+                ],
+
+
+
+
+
+
+
+                'website_url'   => [
+                    'label' => 'Website',
+                    'rules'  => 'permit_empty|valid_url|max_length[300]',
+                    'errors' => [
+                        'max_length' => 'Website cannot exceed 300 characters',
+                    ],
+                ],
+                'company_address'   => [
+                    'label' => 'Company Address',
+                    'rules'  => 'required|string|min_length[5]|max_length[400]',
+                    'errors' => [
+                        'required'   => 'Company Address is required',
+                        'min_length' => 'Company Address must be at least 5 characters long',
+                        'max_length' => 'Company Address cannot exceed 400 characters',
+                    ],
+                ],
+                'counties_worked.*'   => [
+                    'label' => 'Counties Worked',
+                    'rules'  => 'required|string|max_length[50]',
+                    'errors' => [
+                        'required'   => 'Counties Worked is required',
+                        'max_length' => 'Counties Worked cannot exceed 50 characters',
+                    ],
+                ],
+                'work_type.*'   => [
+                    'label' => 'Work Type',
+                    'rules'  => 'required|string|max_length[50]',
+                    'errors' => [
+                        'required'   => 'Work Type is required',
+                        'max_length' => 'Work Type cannot exceed 50 characters',
+                    ],
+                ],
+                'how_did_you_hear_about_us'   => [
+                    'label' => 'About us',
+                    'rules'  => 'required|string|min_length[5]|max_length[300]',
+                    'errors' => [
+                        'required'   => 'About us is required',
+                        'min_length' => 'About us must be at least 5 characters long',
+                        'max_length' => 'About us cannot exceed 300 characters',
+                    ],
+                ],
+
+
+
+
+
+
                 'phone'            => [
-                    'rules'  => 'required|min_length[12]|max_length[15]|numeric',
+                    'rules'  => 'required|min_length[10]|max_length[15]|numeric',
                     'errors' => [
                         'required'   => 'Phone is required',
-                        'min_length' => 'Phone must be at least 12 characters long',
+                        'min_length' => 'Phone must be at least 10 characters long',
                         'max_length' => 'Phone cannot exceed 15 characters',
                         'numeric'    => 'Phone must be a number',
                     ],
                 ],
                 'password'         => [
-                    'rules'  => 'required|min_length[8]|max_length[12]',
+                    'rules'  => 'required|min_length[8]|max_length[15]',
                     'errors' => [
                         'required'   => 'Password is required',
                         'min_length' => 'Password must be at least 8 characters long',
-                        'max_length' => 'Password cannot exceed 12 characters',
+                        'max_length' => 'Password cannot exceed 15 characters',
                     ],
                 ],
                 'confirm_password' => [
-                    'rules'  => 'required|min_length[8]|max_length[12]|matches[password]',
+                    'rules'  => 'required|min_length[8]|max_length[15]|matches[password]',
                     'errors' => [
                         'required'   => 'Confirm Password is required',
                         'min_length' => 'Confirm Password must be at least 8 characters long',
-                        'max_length' => 'Confirm Password cannot exceed 12 characters',
+                        'max_length' => 'Confirm Password cannot exceed 15 characters',
                         'matches'    => 'Confirm Password does not match with Password',
                     ],
                 ],
             ];
 
-            if (!$this->validate($rules)) {
-                $data_page['validation'] = $this->validator;
-                $data_page['form_data'] = $this->request->getPost();
+            $get_form_post = $this->request->getPost(null, FILTER_SANITIZE_FULL_SPECIAL_CHARS);
+            //$get_form_post = $this->request->getPost();
 
-                return view('complete_registration', $data_page);
+            //if (!$this->validate($rules)) {
+            if (!$this->validateData($get_form_post, $rules)) {
+                //$data_page['validation'] = $this->validator;
+     
+                $data_page['validation'] = $validation->getErrors();
+                $data_page['form_data'] = $get_form_post;
+
+                return view('loginauth/templates/' . $template, $data_page);
             } else {
-                $res = $this->uniqueChecker->checkUnique($this->userModel, $this->request->getPost(), ['phone',]);
+
+                $get_counties_worked = $get_work_type = false;
+
+
+
+
+
+                $get_form_post = $validation->getValidated();
+
+
+
+
+
+
+                if (empty($get_form_post) or !is_array($get_form_post)) {
+                    $data_page['error'] = 'Data not found, try again.';
+
+                    return view('loginauth/templates/' . $template, $data_page);
+                }
+
+                //$res = $this->uniqueChecker->checkUnique($this->userModel, $this->request->getPost(), ['phone',]);
+                $res = $this->uniqueChecker->checkUnique($this->userModel, $get_form_post, ['phone',]);
                 if (!$res['phone']) {
                     $data_page['error'] = 'Phone number already exists';
                     $data_page['form_data'] = $this->request->getPost();
 
-                    return view('complete_registration', $data_page);
+                    //return view('complete_registration', $data_page);
+                    return view('loginauth/templates/' . $template, $data_page);
+                }
+
+                /*$this->userModel->update($user['id'], [
+                    'phone'         => $this->request->getPost('phone'),
+                    'password'      => password_hash($this->request->getPost('password'), PASSWORD_BCRYPT),
+                    'verified'      => 1,
+                    'token'         => null,
+                    'token_type'    => null,
+                    'token_expires' => null,
+                ]);*/
+
+                if (is_array($get_form_post['counties_worked'])) {
+                    $get_counties_worked = json_encode($get_form_post['counties_worked']);
+                }
+
+                if (is_array($get_form_post['work_type'])) {
+                    $get_work_type = json_encode($get_form_post['work_type']);
                 }
 
                 $this->userModel->update($user['id'], [
-                    'phone'         => $this->request->getPost('phone'),
-                    'password'      => password_hash($this->request->getPost('password'), PASSWORD_DEFAULT),
+                    'website_url'   => !empty($get_form_post['website_url']) ? $get_form_post['website_url'] : NULL,
+                    'company_address' => !empty($get_form_post['company_address']) ? $get_form_post['company_address'] : NULL,
+                    'counties_worked' => !empty($get_counties_worked) ? $get_counties_worked : NULL,
+                    'work_type' => !empty($get_work_type) ? $get_work_type : NULL,
+                    'how_did_you_hear_about_us' => !empty($get_form_post['how_did_you_hear_about_us']) ? $get_form_post['how_did_you_hear_about_us'] : NULL,
+                    'phone'         => !empty($get_form_post['phone']) ? $get_form_post['phone'] : NULL,
+                    'password'      => password_hash($this->request->getPost('password'), PASSWORD_BCRYPT),
                     'verified'      => 1,
                     'token'         => null,
                     'token_type'    => null,
@@ -209,7 +462,9 @@ class Auth extends Controller {
                 return view('welcome');
             }
         } else {
-            return view('loginauth/templates/register_account', ['error' => 'Invalid or expired verification code.']);
+            $data_page['error'] = 'Invalid or expired verification code.';
+            return view('loginauth/templates/register_account', $data_page);
+            //return view('loginauth/templates/register_account', ['error' => 'Invalid or expired verification code.']);
         }
     }
 
@@ -219,7 +474,15 @@ class Auth extends Controller {
     }
 
     public function login(): string {
-        return view('login');
+
+        helper(['form']);
+        
+        $data_page = [
+            'title'       => lang('Loginauth.titleLoginAuth') . " - " . lang('Loginauth.defSignTitle'),
+            'description' => lang('Loginauth.descriptionLoginAuth') . " - " . lang('Loginauth.defSignTitle'),
+            'form_anchor' => base_url('auth/login_post')
+        ];
+        return view('loginauth/templates/login_auth', $data_page);
     }
 
     public function login_post(): string {
@@ -236,7 +499,15 @@ class Auth extends Controller {
     }
 
     public function request_password_reset(): string {
-        return view('request_password_reset');
+
+        helper(['form']);
+
+        $data_page = [
+            'title'       => lang('Loginauth.titleLoginResetPass') . " - " . lang('Loginauth.defSignTitle'),
+            'description' => lang('Loginauth.descriptionLoginResetPass') . " - " . lang('Loginauth.defSignTitle'),
+            'form_anchor' => base_url('auth/send_password_reset_email')
+        ];
+        return view('loginauth/templates/forgot_password', $data_page);
     }
 
     public function send_password_reset_email(): string {
@@ -254,7 +525,8 @@ class Auth extends Controller {
             ]);
 
             $emailService = \Config\Services::email();
-            $emailService->setFrom('papamuzzy@gmail.com', 'CI CRM');
+            //$emailService->setFrom('papamuzzy@gmail.com', 'CI CRM');
+            $emailService->setFrom('fbccm@web-dev-project.com', 'FcCM test');
             $emailService->setTo($email);
 
             $emailService->setSubject('Password Reset');
@@ -268,16 +540,37 @@ class Auth extends Controller {
     }
 
     public function reset_password($verification_code): string {
+
+        helper(['form']);
+
+        $data_page = [
+            'title'       => lang('Loginauth.titleLoginResetPass') . " - " . lang('Loginauth.defSignTitle'),
+            'description' => lang('Loginauth.descriptionLoginResetPass') . " - " . lang('Loginauth.defSignTitle'),
+            'form_anchor' => base_url('auth/send_password_reset_email')
+        ];
+        
         $user = $this->userModel->where('token', $verification_code)->first();
 
         if ($user && strtotime($user['token_expires']) > time()) {
-            return view('reset_password', ['email' => $user['email'], 'verification_code' => $verification_code]);
+            $data_page['email'] = $user['email'];
+            $data_page['verification_code'] = $verification_code;
+
+            return view('loginauth/templates/reset_password', $data_page);
+
+            //return view('reset_password', ['email' => $user['email'], 'verification_code' => $verification_code]);
         } else {
-            return view('request_password_reset', ['error' => 'Invalid or expired reset code.']);
+            $data_page['error'] = 'Invalid or expired reset code.';
+            return view('loginauth/templates/forgot_password', $data_page);
         }
     }
 
     public function reset_password_post(): string {
+        $data_page = [
+            'title'       => lang('Loginauth.titleLoginResetPass') . " - " . lang('Loginauth.defSignTitle'),
+            'description' => lang('Loginauth.descriptionLoginResetPass') . " - " . lang('Loginauth.defSignTitle'),
+            'form_anchor' => base_url('auth/send_password_reset_email')
+        ];
+
         $verification_code = $this->request->getPost('verification_code');
         $user = $this->userModel->where('token', $verification_code)->first();
 
@@ -287,7 +580,7 @@ class Auth extends Controller {
 
             if ($new_password === $confirm_password) {
                 $this->userModel->update($user['id'], [
-                    'password'      => password_hash($new_password, PASSWORD_DEFAULT),
+                    'password'      => password_hash($new_password, PASSWORD_BCRYPT),
                     'token'         => null,
                     'token_type'    => null,
                     'token_expires' => null,
@@ -302,7 +595,8 @@ class Auth extends Controller {
                 ]);
             }
         } else {
-            return view('request_password_reset', ['error' => 'Invalid or expired reset code.']);
+            $data_page['error'] = 'Invalid or expired reset code.';
+            return view('loginauth/templates/forgot_password', $data_page);
         }
     }
 }

@@ -12,7 +12,7 @@ class Email extends BaseConfig {
     /**
      * The "user agent"
      */
-    public string $userAgent = 'CodeIgniter';
+    public string $userAgent = 'FcCM CRM';
 
     /**
      * The mail sending protocol: mail, sendmail, smtp
@@ -27,22 +27,22 @@ class Email extends BaseConfig {
     /**
      * SMTP Server Hostname
      */
-    public string $SMTPHost = 'smtp.gmail.com';
+    public string $SMTPHost = 'mail.adm.tools';
 
     /**
      * SMTP Username
      */
-    public string $SMTPUser = 'papamuzzy@gmail.com';
+    public string $SMTPUser = 'fbccm@web-dev-project.com';
 
     /**
      * SMTP Password
      */
-    public string $SMTPPass = 'tuqr esti mgaq jkkq';
+    public string $SMTPPass = '6AnSnC3v52';
 
     /**
      * SMTP Port
      */
-    public int $SMTPPort = 587;
+    public int $SMTPPort = 465;
 
     /**
      * SMTP Timeout (in seconds)
@@ -61,7 +61,7 @@ class Email extends BaseConfig {
      *             to the server. 'ssl' means implicit SSL. Connection on port
      *             465 should set this to ''.
      */
-    public string $SMTPCrypto = 'tls';
+    public string $SMTPCrypto = 'ssl';
 
     /**
      * Enable word-wrap

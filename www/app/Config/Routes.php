@@ -18,4 +18,5 @@ $routes->post('auth/send_password_reset_email', 'Auth::send_password_reset_email
 $routes->get('auth/reset_password/(:any)', 'Auth::reset_password/$1');
 $routes->post('auth/reset_password_post', 'Auth::reset_password_post');
 $routes->get('auth/verify/(:any)', 'Auth::verify/$1');
-$routes->post('auth/complete_registration_post', 'Auth::complete_registration_post');
+$routes->get('auth/complete-registration-post', 'Auth::complete_registration_post');
+$routes->post('auth/complete-registration-post', 'Auth::complete_registration_post');
