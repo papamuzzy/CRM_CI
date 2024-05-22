@@ -57,11 +57,12 @@
 
                     <div id="login-form-auth" class="login_form_auth">
                         <?php if (!empty($form_anchor) and is_string($form_anchor)) : ?>
-                        <?= form_open($form_anchor, array('id' => 'form-login-register', 'class'=>'form_login_auth', 'autocomplete'=>'off')) ?> 
+                        <?= form_open($form_anchor, array('id' => 'form-login-register', 'class'=>'form_login_auth', 'autocomplete'=>'off')) ?>
+                            <input type="hidden" name="user_id" value="<?= $user_id; ?>">
                             <div class="row form_row">
                                 <div class="col form_col">
                                     <label for="email" class="form-label">Email</label>
-                                    <input id="email" type="email" name="email" class="form-control form_input form_input_email <?= (!empty($validation['email']) ? 'inp_invalid' : '') ?>" placeholder="Email" aria-label="Email" maxlength="250" required<?= ((!empty($form_data['email'])) ? ' value="' . esc($form_data['email']) . '"' : '') ?>>
+                                    <input id="email" type="email" name="email" class="form-control form_input form_input_email <?= (!empty($validation['email']) ? 'inp_invalid' : '') ?>" placeholder="Email" aria-label="Email" maxlength="250" required<?= ((!empty($email)) ? ' value="' . esc($email) . '"' : '') ?>>
                                     <?php if (!empty($validation['email'])) : ?>
                                         <span class="inp_invalid invalid_cs_inp"><?= esc($validation['email']) ?></span>
                                     <?php endif; ?>

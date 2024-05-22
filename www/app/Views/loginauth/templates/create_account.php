@@ -51,7 +51,8 @@
 
                     <div id="login-form-auth" class="login_form_auth">
                         <?php if (!empty($form_anchor) and is_string($form_anchor)) : ?>
-                        <?= form_open($form_anchor, array('id' => 'form-login-create', 'class'=>'form_login_auth', 'autocomplete'=>'off')) ?> 
+                        <?= form_open($form_anchor, array('id' => 'form-login-create', 'class'=>'form_login_auth', 'autocomplete'=>'off')) ?>
+                            <input type="hidden" name="user_id" value="<?= $form_data['user_id']; ?>">
                             <div class="row form_row">
                                 <div class="col form_col">
                                     <label for="first-name" class="form-label">First Name</label>
