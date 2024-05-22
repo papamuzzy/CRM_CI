@@ -1,0 +1,118 @@
+@font-face {
+    font-family: 'brix_sansbold';
+    src: url('../fonts/brix_sans_bold-webfont.woff2') format('woff2'),
+         url('../fonts/brix_sans_bold-webfont.woff') format('woff');
+    font-weight: normal;
+    font-style: normal;
+    font-display:swap;
+}
+@font-face {
+    font-family: 'brix_sansmedium';
+    src: url('../fonts/brix_sans_medium-webfont.woff2') format('woff2'),
+         url('../fonts/brix_sans_medium-webfont.woff') format('woff');
+    font-weight: normal;
+    font-style: normal;
+    font-display:swap;
+}
+@font-face {
+    font-family: 'brix_sansregular';
+    src: url('../fonts/brix_sans_regular-webfont.woff2') format('woff2'),
+         url('../fonts/brix_sans_regular-webfont.woff') format('woff');
+    font-weight: normal;
+    font-style: normal;
+    font-display:swap;
+}
+@font-face {
+    font-family: 'brix_sanslight';
+    src: url('../fonts/brix_sans_light-webfont.woff2') format('woff2'),
+         url('../fonts/brix_sans_light-webfont.woff') format('woff');
+    font-weight: normal;
+    font-style: normal;
+    font-display:swap;
+}
+a {
+    text-decoration: none;
+}
+a:hover, a:active, a:focus {
+    text-decoration: underline;
+}
+textarea {
+    resize: vertical
+}
+.no-transition * {
+    -webkit-transition: none!important;
+    -moz-transition: none!important;
+    -ms-transition: none!important;
+    -o-transition: none!important;
+    transition: none!important
+}
+.section {
+    display: inline-block;
+    width: 100%;
+    position: relative
+}
+.section_wdth {
+    margin: 0 auto;
+    background-color: transparent;
+    padding: 0 15px
+}
+.section_wdth_1920 {
+    max-width: 1920px
+}
+.section_wdth_1475 {
+    max-width: 1475px
+}
+.section_wdth_1300 {
+    max-width: 1300px
+}
+.section_wdth_1400 {
+    max-width: 1400px
+}
+.section_wdth_1560 {
+    max-width: 1560px
+}
+.section_wdth_1500 {
+    max-width: 1500px
+}
+.section_wdth_1600 {
+    max-width: 1600px
+}
+.section_wdth_1700 {
+    max-width: 1700px
+}
+.section_wdth_1250 {
+    max-width: 1250px
+}
+.section_wdth_1280 {
+    max-width: 1280px
+}
+.section_wdth_1120 {
+    max-width: 1120px
+}
+.section_wdth_1295 {
+    max-width: 1295px
+}
+.section_wdth_650 {
+    max-width: 650px
+}
+.span_ico_el {
+    display: inline-block;
+    background-color: transparent;
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center
+}
+.navmenuul, ul.slick-dots {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    line-height: normal
+}
+.navmenuli, ul.slick-dots li {
+    display: inline-block;
+    position: relative
+}
+
+
+
+
