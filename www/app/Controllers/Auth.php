@@ -203,6 +203,9 @@ class Auth extends Controller {
     public function verify($verification_code) {
         helper(['form']);
 
+        // TODO: На даний момент, лінк з токеном можна відкрити в іншому браузері, маю на увазі що доступ до лінку може мати третя особа, тому потрібно буде привʼязати до юзера цей токен
+        // TODO: Потрібна валідація токену
+
         $data_page = [
             'title'       => lang('Loginauth.titleLoginCreate') . " - " . lang('Loginauth.defSignTitle'),
             'description' => lang('Loginauth.descriptionLoginCreate') . " - " . lang('Loginauth.defSignTitle'),
@@ -416,7 +419,7 @@ class Auth extends Controller {
                     'work_type'                 => !empty($get_work_type) ? $get_work_type : null,
                     'how_did_you_hear_about_us' => !empty($get_form_post['how_did_you_hear_about_us']) ? $get_form_post['how_did_you_hear_about_us'] : null,
                     'phone'                     => !empty($get_form_post['phone']) ? $get_form_post['phone'] : null,
-                    'password'                  => password_hash($this->request->getPost('password'), PASSWORD_BCRYPT),
+                    'password'                  => password_hash($get_form_post['password'], PASSWORD_BCRYPT),
                     'verified'                  => 1,
                     'token'                     => null,
                     'token_type'                => null,
@@ -449,6 +452,17 @@ class Auth extends Controller {
     }
 
     public function login_post(): string {
+
+        helper(['form']);
+
+        // TODO: Потрібна валідація
+
+        $data_page = [
+            'title'       => lang('Loginauth.titleLoginAuth') . " - " . lang('Loginauth.defSignTitle'),
+            'description' => lang('Loginauth.descriptionLoginAuth') . " - " . lang('Loginauth.defSignTitle'),
+            'form_anchor' => base_url('auth/login_post'),
+        ];
+
         $email = $this->request->getPost('email');
         $password = $this->request->getPost('password');
 
@@ -457,12 +471,19 @@ class Auth extends Controller {
         if ($user && password_verify($password, $user['password']) && $user['verified']) {
             return view('welcome');
         } else {
-            return view('login', ['error' => 'Invalid credentials or email not verified.']);
+            
+            $data_page['error'] = 'Invalid credentials or email not verified.';
+
+            return view('loginauth/templates/login_auth', $data_page);
+
+            //return view('loginauth/templates/login_auth', ['error' => 'Invalid credentials or email not verified.']);
         }
     }
 
     public function request_password_reset(): string {
         helper(['form']);
+
+        // TODO: Після першої форми, верефікації емейлу, юзер може не завершивши реєстрацію, скористатись скиданням пароля, це потрібно пофіксити, юзер не може скидати пароль заповнивши лише першу форму реєстрації, не закінчивши реєстрацію
 
         $data_page = [
             'title'       => lang('Loginauth.titleLoginResetPass') . " - " . lang('Loginauth.defSignTitle'),
@@ -475,6 +496,8 @@ class Auth extends Controller {
     public function send_password_reset_email(): string {
         $email = $this->request->getPost('email');
         $user = $this->userModel->where('email', $email)->first();
+
+        // TODO: Потрібно тут переробити логіку, наприклад якщо юзера нема то повертати на сторінку відновлення, без відображення форми але з повідомленням що лист наліслано
 
         if ($user) {
             $verification_code = md5(rand());
@@ -505,8 +528,7 @@ class Auth extends Controller {
 
             $message = '
             <p>Hi ' . ucwords(strtolower($user['first_name'])) . '</p>
-            <p>Reset password. <a href="' . base_url('auth/reset_password/' . $verification_code) . '">Click this link to continue</a>.</p>
-        ';
+            <p>Reset password. <a href="' . base_url('auth/reset_password/' . $verification_code) . '">Click this link to continue</a>.</p>';
 
             $emailService->setFrom('fbccm@web-dev-project.com', 'FcCM test');
             $emailService->setTo($email);
@@ -525,6 +547,9 @@ class Auth extends Controller {
 
     public function reset_password($verification_code): string {
         helper(['form']);
+
+        // TODO: Та сама ситуація, лінк з токеном доступний на інший пристроях та браузерах, потрібно переробити логіку привʼязки токену суто для конкретного юзера. Емейл не потрібно виводити але поле нехай буде, нехай юзер вводить свій емейл, для того щоб підтвердити.
+        // TODO: Потрібна валідація токену
 
         $data_page = [
             'title'       => lang('Loginauth.titleLoginResetPass') . " - " . lang('Loginauth.defSignTitle'),
@@ -548,6 +573,9 @@ class Auth extends Controller {
     }
 
     public function reset_password_post(): string {
+
+        // TODO: Потрібна валідація
+
         $data_page = [
             'title'       => lang('Loginauth.titleLoginResetPass') . " - " . lang('Loginauth.defSignTitle'),
             'description' => lang('Loginauth.descriptionLoginResetPass') . " - " . lang('Loginauth.defSignTitle'),

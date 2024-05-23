@@ -2,7 +2,7 @@
 
 <?= $this->section('content') ?>
 
-    <div id="login-page" class="section login_page login_page_lw">
+    <div id="login-page" class="section login_page login_page_lw pgs_register_account">
         <div class="section_wdth login_form_fw">
             <div class="login_form_bi_lw">
                 <div class="login_form_bi_f">
@@ -12,7 +12,10 @@
                         </div>
                         <div class="login_form_tt_cn">
                             <div class="login_form_tt_n">
-                            <span>Register Account</span>
+                                <span>Register Account</span>
+                            </div>
+                            <div class="login_form_tt_lk">
+                                <span>Don't have an Account? <a href="<?= base_url("auth/login") ?>">Log in</a></span>
                             </div>
                         </div>
                     </div><!-- .login_form_tt -->
@@ -24,36 +27,6 @@
                             </div>
                         </div>
                     <?php endif; ?>
-
-
-
-
-
-
-                    <?php /*if (isset($validation)): ?>
-                        <div class="form_validation_msg">
-                            <div class="form_validation_msg_ls">
-                                <? // $validation->listErrors() ?>
-                            </div>
-                        </div>
-                    <?php endif;*/ ?>
-
-                    <?php /*if (isset($form_data)): ?>
-                        <div class="form_validation_msg">
-                            <div class="form_validation_msg_">
-                                <pre>
-                                <? //= var_export($form_data, true) ?>
-                                </pre>
-                            </div>
-                        </div>
-                    <?php endif;*/ ?>
-
-
-
-
-
-
-
 
                     <div id="login-form-auth" class="login_form_auth">
                         <?php if (!empty($form_anchor) and is_string($form_anchor)) : ?>

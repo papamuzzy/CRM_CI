@@ -20,13 +20,120 @@
     );
 
     $list_counties_worked = array(
-        'One',
-        'Two',
-        'Three'
+        "Registration Complete" => array(
+            'Alachua County',
+            'Brevard County',
+            'Columbia County',
+            'Cape Coral',
+            'Charlotte County',
+            'City of Boca Raton',
+            'Collier County',
+            'City of Sanibel',
+            'Citrus County',
+            'City of Clearwater',
+            'City of West Palm Beach',
+            'City of Jacksonville',
+            'City of Jupiter',
+            'City of North Port',
+            'City of Largo',
+            'City of Miami',
+            'City of St. Petersburg',
+            'City of Delray Beach',
+            'City of Fort Myers',
+            'City of Fort Pierce',
+            'City of Wellington',
+            'Clay County',
+            'City of Homestead',
+            'City of Port St Lucie',
+            'City of Tampa',
+            'City of Orlando',
+            'City of Naples',
+            'City of Apopka',
+            'City of Punta Gorda',
+            'City of Titusville',
+            'City of Gulfport',
+            'City of Marco Island',
+            'City of Ormond Beach',
+            'City of Bonita Springs',
+            'Fort Myers Beach',
+            'Hernando County',
+            'Hillsborough County',
+            'Indian River County',
+            'Lee County',
+            'Miami-Dade County',
+            'Martin County',
+            'Manatee County',
+            'Marion County',
+            'Orange County',
+            'Palm Beach County',
+            'Pinellas County',
+            'Polk County',
+            'Panama City',
+            'Pasco County',
+            'Suwannee County',
+            'Sarasota County',
+            'Saint Lucie County',
+            'Town of Highland Beach',
+            'Village of Estero',
+            'Volusia County',
+            'Walton County'            
+        ),
+        "Upcoming Projects-Need to Register or Inquire" => array(
+            'Brooksville',
+            'City of Miami Beach',
+            'City of Lake Worth Beach',
+            'DeSoto County',
+            'Lauderhill',
+            'Osceola County',
+            'Pembroke Pines',
+            'Palm Bay',
+            'St. Johns County',
+            'Weston'
+        ),
+        "Upcoming Projects-Need to Register or Inquire" => array(
+            'City of St. Pete Beach',
+            'City of Pompano Beach',
+            'City of Pinellas Park',
+            'City of Deerfield Beach',
+            'City of Sebastian',
+            'City of Gainesville',
+            'City of Tallahassee',
+            'City of Palm Bay',
+            'City of Lakeland',
+            'City of Deltona',
+            'City of Palm Coast',
+            'City of Melbourne',
+            'City of Boynton Beach',
+            'City of Kissimmee',
+            'City of Daytona Beach',
+            'City of Ocala',
+            'City of St. Augustine',
+            'City of Fernandina Beach',
+            'City of Palatka',
+            'City of Lake City',
+            'City of Jacksonville Beach',
+            'City of Atlantic Beach',
+            'Flagler County',
+            'Levy County',
+            'Leon County',
+            'Miami Shores Village',
+            'North Lauderdale',
+            'Nassau County',
+            'Okeechobee County',
+            'Osceola County',
+            'Putnam County',
+            'Pensacola',
+            'Town of Orange Park'
+        ),
+        "No Go Zones" => array(
+            'Broward County',
+            'Fort Lauderdale',
+            'Hollywood'
+        )
     );
 ?>
 
-    <div id="login-page" class="section login_page login_page_lw">
+    <div id="login-page" class="section login_page login_page_lw pgs_create_account">
         <div class="section_wdth login_form_fw">
             <div class="login_form_bi_lw">
                 <div class="login_form_bi_f">
@@ -117,9 +224,15 @@
                                     <label for="input-counties-worked" class="form-label">Counties Worked</label>
                                     <select id="input-counties-worked" name="counties_worked[]" class="form-select form_input_select <?= (!empty($validation['counties_worked']) ? 'inp_invalid' : '') ?>" multiple="multiple" required>
                                         <option></option>
-                                        <?php foreach ($list_counties_worked as $val_counties_worked) : ?>
-                                            <?php if (!empty($val_counties_worked)) : ?>
-                                            <option value="<?= esc($val_counties_worked) ?>" <?= ((!empty($data_counties_worked) and in_array($val_counties_worked, $data_counties_worked)) ? ' selected ' : '') ?>><?= esc($val_counties_worked) ?></option>
+                                        <?php foreach ($list_counties_worked as $key_counties_worked => $val_counties_worked) : ?>
+                                            <?php if (!empty($key_counties_worked) and is_array($val_counties_worked)) : ?>
+                                                <optgroup label="<?= esc($key_counties_worked) ?>">
+                                                    <?php foreach ($val_counties_worked as $val_counties_worked_sub) : ?>
+                                                        <?php if (!empty($val_counties_worked_sub)) : ?>
+                                                            <option value="<?= esc($val_counties_worked_sub) ?>" <?= ((!empty($data_counties_worked) and in_array($val_counties_worked_sub, $data_counties_worked)) ? ' selected ' : '') ?>><?= esc($val_counties_worked_sub) ?></option>
+                                                        <?php endif; ?>
+                                                    <?php endforeach; ?>
+                                                </optgroup>
                                             <?php endif; ?>
                                         <?php endforeach; ?>
                                     </select>

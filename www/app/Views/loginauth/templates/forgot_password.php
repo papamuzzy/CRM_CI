@@ -2,7 +2,7 @@
 
 <?= $this->section('content') ?>
 
-    <div id="login-page" class="section login_page login_page_lw">
+    <div id="login-page" class="section login_page login_page_lw pgs_forgot_password">
         <div class="section_wdth login_form_fw">
             <div class="login_form_bi_lw">
                 <div class="login_form_bi_f">
