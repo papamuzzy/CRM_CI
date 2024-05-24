@@ -41,6 +41,7 @@
                             <div class="row form_row">
                                 <div class="col form_col">
                                     <label for="input-pass" class="form-label">New Password</label>
+                                    <span data-toggle="input-pass" class="span_ico_el toggle_password_icon toggle_password_icon_hd"></span>
                                     <input type="password" id="input-pass" name="new_password" class="form-control form_input form_input_pass <?= (!empty($validation['new_password']) ? 'inp_invalid' : '') ?>" placeholder="Password" aria-label="Password" maxlength="50" pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}" title="Must contain at least one number and one uppercase and lowercase letter, and at least 8 or more characters" required value="">
                                     <?php if (!empty($validation['new_password'])) : ?>
                                         <span class="inp_invalid invalid_cs_inp"><?= esc($validation['new_password']) ?></span>
@@ -50,6 +51,7 @@
                             <div class="row form_row">
                                 <div class="col form_col">
                                     <label for="input-pass-confirm" class="form-label">Confirm New Password </label>
+                                    <span data-toggle="input-pass-confirm" class="span_ico_el toggle_password_icon toggle_password_icon_hd"></span>
                                     <input type="password" id="input-pass-confirm" name="confirm_password" class="form-control form_input form_input_pass <?= (!empty($validation['confirm_password']) ? 'inp_invalid' : '') ?>" placeholder="Confirm Password" aria-label="Confirm Password" maxlength="50" pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}" required value="">
                                     <?php if (!empty($validation['confirm_password'])) : ?>
                                         <span class="inp_invalid invalid_cs_inp"><?= esc($validation['confirm_password']) ?></span>
@@ -129,6 +131,18 @@
                     } else {
                         $("#input-pass").focus();
                     }   
+                }
+            });
+
+            $(".toggle_password_icon").click(function() {
+                let inputPasss = $('#'+$(this).attr("data-toggle"));
+                
+                if (inputPasss.attr("type") == "password") {                    
+                    inputPasss.attr("type", "text");
+                    $(this).removeClass('toggle_password_icon_hd').addClass('toggle_password_icon_sh');
+                } else {
+                    inputPasss.attr("type", "password");
+                    $(this).removeClass('toggle_password_icon_sh').addClass('toggle_password_icon_hd');
                 }
             });
         });
