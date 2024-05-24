@@ -25,36 +25,6 @@
                         </div>
                     <?php endif; ?>
 
-
-
-
-
-
-                    <?php /*if (isset($validation)): ?>
-                        <div class="form_validation_msg">
-                            <div class="form_validation_msg_ls">
-                                <? // $validation->listErrors() ?>
-                            </div>
-                        </div>
-                    <?php endif;*/ ?>
-
-                    <?php /*if (isset($form_data)): ?>
-                        <div class="form_validation_msg">
-                            <div class="form_validation_msg_">
-                                <pre>
-                                <? //= var_export($form_data, true) ?>
-                                </pre>
-                            </div>
-                        </div>
-                    <?php endif;*/ ?>
-
-
-
-
-
-
-
-
                     <div id="login-form-auth" class="login_form_auth">
                         <?php if (!empty($form_anchor) and is_string($form_anchor)) : ?>
                         <?= form_open($form_anchor, array('id' => 'form-login-register', 'class'=>'form_login_auth', 'autocomplete'=>'off')) ?>
@@ -62,7 +32,7 @@
                             <div class="row form_row">
                                 <div class="col form_col">
                                     <label for="email" class="form-label">Email</label>
-                                    <input id="email" type="email" name="email" class="form-control form_input form_input_email <?= (!empty($validation['email']) ? 'inp_invalid' : '') ?>" placeholder="Email" aria-label="Email" maxlength="250" required<?= ((!empty($email)) ? ' value="' . esc($email) . '"' : '') ?>>
+                                    <input id="email" type="email" name="email" class="form-control form_input form_input_email <?= (!empty($validation['email']) ? 'inp_invalid' : '') ?>" placeholder="Email" aria-label="Email" maxlength="250" required value="">
                                     <?php if (!empty($validation['email'])) : ?>
                                         <span class="inp_invalid invalid_cs_inp"><?= esc($validation['email']) ?></span>
                                     <?php endif; ?>
@@ -71,7 +41,7 @@
                             <div class="row form_row">
                                 <div class="col form_col">
                                     <label for="input-pass" class="form-label">New Password</label>
-                                    <input type="password" id="input-pass" name="new_password" class="form-control form_input form_input_pass <?= (!empty($validation['new_password']) ? 'inp_invalid' : '') ?>" placeholder="Password" aria-label="Password" maxlength="50" required value="">
+                                    <input type="password" id="input-pass" name="new_password" class="form-control form_input form_input_pass <?= (!empty($validation['new_password']) ? 'inp_invalid' : '') ?>" placeholder="Password" aria-label="Password" maxlength="50" pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}" title="Must contain at least one number and one uppercase and lowercase letter, and at least 8 or more characters" required value="">
                                     <?php if (!empty($validation['new_password'])) : ?>
                                         <span class="inp_invalid invalid_cs_inp"><?= esc($validation['new_password']) ?></span>
                                     <?php endif; ?>
@@ -80,12 +50,29 @@
                             <div class="row form_row">
                                 <div class="col form_col">
                                     <label for="input-pass-confirm" class="form-label">Confirm New Password </label>
-                                    <input type="password" id="input-pass-confirm" name="confirm_password" class="form-control form_input form_input_pass <?= (!empty($validation['confirm_password']) ? 'inp_invalid' : '') ?>" placeholder="Confirm Password" aria-label="Confirm Password" maxlength="50" required value="">
+                                    <input type="password" id="input-pass-confirm" name="confirm_password" class="form-control form_input form_input_pass <?= (!empty($validation['confirm_password']) ? 'inp_invalid' : '') ?>" placeholder="Confirm Password" aria-label="Confirm Password" maxlength="50" pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}" required value="">
                                     <?php if (!empty($validation['confirm_password'])) : ?>
                                         <span class="inp_invalid invalid_cs_inp"><?= esc($validation['confirm_password']) ?></span>
                                     <?php endif; ?>
                                 </div>
                             </div>
+
+                            <div class="row form_row">
+                                <div class="col form_col">
+                                    <div id="message-passw-check" class="message_passw_check">
+                                        <div class="message_passw_check_tt">
+                                            <span>Password must contain the following:</span>
+                                        </div>
+                                        <div class="message_passw_check_ds">
+                                            <span id="message-letter-check" class="message_passw_lbl message_passw_invalid">A lowercase letter</span>
+                                            <span id="message-capital-check" class="message_passw_lbl message_passw_invalid">A capital (uppercase) letter</span>
+                                            <span id="message-number-check" class="message_passw_lbl message_passw_invalid">A number</span>
+                                            <span id="message-length-check" class="message_passw_lbl message_passw_invalid">Minimum 8 characters</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
                             <div class="row form_row form_login_button">
                                 <div class="col form_col">
                                     <button type="submit" class="btn btn-primary"><span>Send reset email</span></button>
@@ -133,12 +120,90 @@
                     }
                 },
                 submitHandler: function(form) {
-                    $(form).find('button[type="submit"] span').html("Submitting ...");
-                    $(form).find('button[type="submit"]').prop("disabled", true);
-                    form.submit();
+                    let validCheckSm = validListCheck();
+
+                    if (validCheckSm) {
+                        $(form).find('button[type="submit"] span').html("Submitting ...");
+                        $(form).find('button[type="submit"]').prop("disabled", true);
+                        form.submit();
+                    } else {
+                        $("#input-pass").focus();
+                    }   
                 }
             });
         });
+        
+        var inputPass = document.getElementById("input-pass");
+        var messageletter = document.getElementById("message-letter-check");
+        var messagecapital = document.getElementById("message-capital-check");
+        var messagenumber = document.getElementById("message-number-check");
+        var messagelength = document.getElementById("message-length-check");
+
+        inputPass.onfocus = function() {
+            document.getElementById("message-passw-check").style.opacity = "1";
+        }
+
+        inputPass.onblur = function() {
+            document.getElementById("message-passw-check").style.display = "0.7";
+        }
+
+        // When the user starts to type something inside the password field
+        inputPass.onkeyup = function() {
+            validListCheck();
+        }
+
+        function validListCheck() {
+            var validCheck = true;
+
+            // Validate lowercase letters
+            var lowerCaseLetters = /[a-z]/g;
+            if(inputPass.value.match(lowerCaseLetters)) {  
+                messageletter.classList.remove("message_passw_invalid");
+                messageletter.classList.add("message_passw_valid");
+            } else {
+                messageletter.classList.remove("message_passw_valid");
+                messageletter.classList.add("message_passw_invalid");
+
+                validCheck = false;
+            }
+            
+            // Validate capital letters
+            var upperCaseLetters = /[A-Z]/g;
+            if(inputPass.value.match(upperCaseLetters)) {  
+                messagecapital.classList.remove("message_passw_invalid");
+                messagecapital.classList.add("message_passw_valid");
+            } else {
+                messagecapital.classList.remove("message_passw_valid");
+                messagecapital.classList.add("message_passw_invalid");
+
+                validCheck = false;
+            }
+
+            // Validate numbers
+            var numbers = /[0-9]/g;
+            if(inputPass.value.match(numbers)) {  
+                messagenumber.classList.remove("message_passw_invalid");
+                messagenumber.classList.add("message_passw_valid");
+            } else {
+                messagenumber.classList.remove("message_passw_valid");
+                messagenumber.classList.add("message_passw_invalid");
+
+                validCheck = false;
+            }
+            
+            // Validate length
+            if(inputPass.value.length >= 8) {
+                messagelength.classList.remove("message_passw_invalid");
+                messagelength.classList.add("message_passw_valid");
+            } else {
+                messagelength.classList.remove("message_passw_valid");
+                messagelength.classList.add("message_passw_invalid");
+
+                validCheck = false;
+            }
+
+            return validCheck;
+        }
     </script>
 
 <?= $this->endSection() ?>

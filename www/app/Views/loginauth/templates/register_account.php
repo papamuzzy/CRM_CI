@@ -15,7 +15,7 @@
                                 <span>Register Account</span>
                             </div>
                             <div class="login_form_tt_lk">
-                                <span>Don't have an Account? <a href="<?= base_url("auth/login") ?>">Log in</a></span>
+                                <span>Back to <a href="<?= base_url("auth/login") ?>">Login</a></span>
                             </div>
                         </div>
                     </div><!-- .login_form_tt -->

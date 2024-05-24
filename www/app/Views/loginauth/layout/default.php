@@ -6,7 +6,7 @@
     <meta name="robots" content="noindex,nofollow">
 
     <title><?= esc($title) ?></title>
-	<meta name="description" content="<?= esc($description) ?>">
+	  <meta name="description" content="<?= esc($description) ?>">
 
     <link rel="preconnect" href="https://cdnjs.cloudflare.com">
     <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
@@ -14,11 +14,11 @@
     <meta name="theme-color" content="#2261FF">
 
     <link rel="shortcut icon" href="<?= base_url("favicon.ico") ?>">
-    <!--<link rel="apple-touch-icon" sizes="57x57" href="<?php //echo base_url("favicon-57.png") ?>">
-    <link rel="apple-touch-icon" sizes="180x180" href="<?php //echo base_url("favicon-180.png") ?>">
-    <link rel="icon" type="image/png" href="<?php //echo base_url("favicon.png") ?>">
-    <link rel="icon" type="image/png" sizes="32x32" href="<?php //echo base_url("favicon-32.png") ?>">
-    <link rel="icon" type="image/png" sizes="16x16" href="<?php //echo base_url("favicon-16.png") ?>">-->
+    <link rel="apple-touch-icon" sizes="57x57" href="<?php echo base_url("favicon-57.png") ?>">
+    <link rel="apple-touch-icon" sizes="180x180" href="<?php echo base_url("apple-touch-icon.png") ?>">
+    <link rel="icon" type="image/png" href="<?php echo base_url("favicon.png") ?>">
+    <link rel="icon" type="image/png" sizes="32x32" href="<?php echo base_url("favicon-32.png") ?>">
+    <link rel="icon" type="image/png" sizes="16x16" href="<?php echo base_url("favicon-16.png") ?>">
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap.min.css" integrity="sha512-jnSuA4Ss2PkkikSOLtYs8BlYIeeIK1h99ty4YfvRPAlzr377vr3CXDb7sb7eEEBYjDtcYj+AjBH3FLv5uSJuXg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/css/bootstrap-reboot.min.css" integrity="sha512-HJaQ4y3YcUGCWikWDn8bFeGTy3Z/3IbxFYQ9G3UAWx16PyTL6Nu5P/BDDV9s0WhK3Sq27Wtbk/6IcwGmGSMXYg==" crossorigin="anonymous" referrerpolicy="no-referrer" />

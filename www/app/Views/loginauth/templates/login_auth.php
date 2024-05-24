@@ -12,10 +12,10 @@
                     </div>
                     <div class="login_form_tt_cn">
                         <div class="login_form_tt_n">
-                            <span>Login with your email</span>
+                            <span>Sign in to FCC</span>
                         </div>
                         <div class="login_form_tt_lk">
-                            <span>Don't have an Account? <a href="<?= base_url("auth/register") ?>">Create Account</a></span>
+                            <span>New to FCC? <a href="<?= base_url("auth/register") ?>">Create an account</a></span>
                         </div>
                     </div>
                 </div><!-- .login_form_tt -->

@@ -27,17 +27,17 @@ class Email extends BaseConfig {
     /**
      * SMTP Server Hostname
      */
-    public string $SMTPHost = 'mail.adm.tools';
+    public string $SMTPHost = '';
 
     /**
      * SMTP Username
      */
-    public string $SMTPUser = 'fbccm@web-dev-project.com';
+    public string $SMTPUser = '';
 
     /**
      * SMTP Password
      */
-    public string $SMTPPass = '6AnSnC3v52';
+    public string $SMTPPass = '';
 
     /**
      * SMTP Port

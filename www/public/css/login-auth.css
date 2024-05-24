@@ -21,6 +21,7 @@
     background-size: contain;
     background-repeat: no-repeat;
     background-position: center;
+    background-attachment: fixed;
 	padding-top: 4rem;
     padding-bottom: 5rem;
 }
@@ -252,7 +253,7 @@
     line-height: normal;
 }
 .login_form_tt_lk {
-	margin-top: 0.6rem;
+	margin-top: 1.5rem;
 }
 .login_form_tt_lk span, .login_form_tt_lk span a {
     font-family: 'brix_sanslight';
@@ -334,7 +335,7 @@
     align-items: center;
     justify-content: center;
     width: 30px;
-    height: 37px;
+    height: 36px;
     top: 0;
     right: 0;
     /*border-top-right-radius: 0px;
@@ -373,7 +374,7 @@
     font-style: normal;
     /* font-weight: 400; */
     line-height: 1.4rem;
-    text-transform: capitalize;
+    text-transform: none;
     font-family: 'brix_sansregular';
 }
 .select2-container--default .select2-results__option--highlighted[aria-selected] {
@@ -384,6 +385,10 @@
     background: 1px solid #e1ecff;
     color: #0E1726;
 }
+.select2-container--default .select2-selection--multiple {
+    background-color: #f3f6fb !important;
+    border: 1px solid rgba(133, 141, 172, 0.30);
+}
 .select2-container--default .select2-selection--multiple .select2-selection__choice {
     background-color: #e1ecff!important;
     border: 1px solid #75a2f0!important;
@@ -392,8 +397,13 @@
 .select2-container--default .select2-selection--multiple .select2-selection__choice__remove {
     margin-right: 4px !important;
 }
+.select2-container--default .select2-selection--multiple .select2-selection__rendered {
+    padding: 0 5px 0 6px !important;
+}
 
-
+.form-control:disabled {
+    opacity: .8;
+}
 .form_input:focus,
 .form_input:active,
 .form_input_select:focus,
@@ -404,7 +414,7 @@
     outline-color: rgba(13,110,253,.25);
     background-color: #fff;
 }
-.form_input::placeholder, .form_input_select::placeholder, .form_textarea::placeholder {
+.form_input::placeholder, .form_input_select::placeholder, .form_textarea::placeholder, input.select2-search__field::placeholder {
     color: #858DAC !important;
 }
 .form_input:not(:placeholder-shown),
@@ -502,7 +512,7 @@ span.inp_invalid, .form_validation_msg_inp_invalid {
     font-family: 'brix_sansregular';
 }
 .form_validation_msg_inp_valid_success {
-    color: #2161ff;
+    color: #282828;
 }
 .form_validation_msg_inp_invalid, .form_validation_msg_inp_valid_success {
     font-size: 1.1rem;
@@ -531,14 +541,55 @@ select.inp_invalid ~ .select2:not(.select2-container--below) span.select2-select
     justify-content: center;
 }
 
-
-
-
-
-
-
-
-
-
-
-
+.message_passw_check {
+    position: relative;
+}
+.message_passw_check_tt span {
+    color: #696969;
+    font-size: 1rem;
+    line-height: normal;
+    font-style: normal;
+    font-family: 'brix_sansbold';
+}
+.message_passw_check_tt {
+    display: inline-block;
+    width: 100%;
+    margin-bottom: .5rem;
+}
+.message_passw_check_ds {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    width: 100%;
+    text-align: left;
+    padding: 0 .5rem 0 0.8rem;
+}
+.message_passw_lbl {
+    margin: .2rem 0;
+    font-size: .9rem;
+    line-height: normal;
+    font-style: normal;
+    font-family: 'brix_sansregular';
+    display: inline-flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    flex-wrap: nowrap;
+}
+.message_passw_invalid:before, .message_passw_valid:before {
+    position: relative;
+    display: inline-block;
+    margin-right: 0.6rem;
+}
+.message_passw_valid {
+    color: green;
+}
+.message_passw_valid:before {
+    content: "✔";
+}
+.message_passw_invalid {
+    color: red;
+}
+.message_passw_invalid:before {
+    content: "✖";
+}

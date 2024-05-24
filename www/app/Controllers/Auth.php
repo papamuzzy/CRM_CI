@@ -169,16 +169,17 @@ class Auth extends Controller {
 
         $emailService->initialize($configemail);
 
-        $message = '
+        /*$message = '
             <p>Hi ' . ucwords(strtolower($first_name)) . '</p>
             <p>Complete verification and continue registration, confirm your email address. <a href="' . base_url('auth/verify/' . $verification_code) . '">Click this link to continue</a>.</p>
-        ';
+        ';*/
+
+        $message = sprintf(lang('Loginauth.messagePreRegisterAccountMessage'), base_url('auth/verify/' . $verification_code));
 
         $emailService->setFrom('fbccm@web-dev-project.com', 'FcCM test');
         $emailService->setTo($email);
 
-        $emailService->setSubject('Email Verification');
-        //$message = '<p>Please click this link to verify your email: <a href="'.base_url('auth/verify/' . $verification_code).'"></a></p>';
+        $emailService->setSubject(lang('Loginauth.messagePreRegisterAccountSubject'));
         $emailService->setMessage($message);
 
         //$emailService->send();
@@ -263,37 +264,41 @@ class Auth extends Controller {
         $user = $this->userModel->where('id', $user_id)->first();
 
         if ($user && strtotime($user['token_expires']) > time()) {
+
+            // TODO: ці поля ми не будемо вже міняти на другій формі реєстрації, але поки нехай виводяться в інпутах
+            /*'first_name'                => [
+                'label'  => 'First name',
+                'rules'  => 'required|alpha_numeric_space|min_length[3]|max_length[150]',
+                'errors' => [
+                    'required'   => 'First name is required',
+                    'alpha'      => 'First name must contain only alphabetic characters',
+                    'min_length' => 'First name must be at least 3 characters long',
+                    'max_length' => 'First name cannot exceed 50 characters',
+                ],
+            ],
+            'last_name'                 => [
+                'label'  => 'Last name',
+                'rules'  => 'required|alpha_numeric_space|min_length[3]|max_length[150]',
+                'errors' => [
+                    'required'   => 'Last name is required',
+                    'alpha'      => 'Last name must contain only alphabetic characters',
+                    'min_length' => 'Last name must be at least 3 characters long',
+                    'max_length' => 'Last name cannot exceed 50 characters',
+                ],
+            ],
+            'email'                     => [
+                //'rules'  => 'required|valid_email|is_unique[users.email]',
+                'label'  => 'Email',
+                'rules'  => 'required|valid_email|max_length[250]',
+                'errors' => [
+                    'required'    => 'Email is required',
+                    'valid_email' => 'Email must be valid',
+                    //'is_unique'   => 'Email already exists',
+                ],
+            ],*/
+            //END TODO
+
             $rules = [
-                'first_name'                => [
-                    'label'  => 'First name',
-                    'rules'  => 'required|alpha_numeric_space|min_length[3]|max_length[150]',
-                    'errors' => [
-                        'required'   => 'First name is required',
-                        'alpha'      => 'First name must contain only alphabetic characters',
-                        'min_length' => 'First name must be at least 3 characters long',
-                        'max_length' => 'First name cannot exceed 50 characters',
-                    ],
-                ],
-                'last_name'                 => [
-                    'label'  => 'Last name',
-                    'rules'  => 'required|alpha_numeric_space|min_length[3]|max_length[150]',
-                    'errors' => [
-                        'required'   => 'Last name is required',
-                        'alpha'      => 'Last name must contain only alphabetic characters',
-                        'min_length' => 'Last name must be at least 3 characters long',
-                        'max_length' => 'Last name cannot exceed 50 characters',
-                    ],
-                ],
-                'email'                     => [
-                    //'rules'  => 'required|valid_email|is_unique[users.email]',
-                    'label'  => 'Email',
-                    'rules'  => 'required|valid_email|max_length[250]',
-                    'errors' => [
-                        'required'    => 'Email is required',
-                        'valid_email' => 'Email must be valid',
-                        //'is_unique'   => 'Email already exists',
-                    ],
-                ],
                 'website_url'               => [
                     'label'  => 'Website',
                     'rules'  => 'permit_empty|valid_url|max_length[300]',
@@ -526,14 +531,16 @@ class Auth extends Controller {
 
             $emailService->initialize($configemail);
 
-            $message = '
+            /*$message = '
             <p>Hi ' . ucwords(strtolower($user['first_name'])) . '</p>
-            <p>Reset password. <a href="' . base_url('auth/reset_password/' . $verification_code) . '">Click this link to continue</a>.</p>';
+            <p>Reset password. <a href="' . base_url('auth/reset_password/' . $verification_code) . '">Click this link to continue</a>.</p>';*/
+
+            $message = sprintf(lang('Loginauth.messageResetPasswordAccountMessage'), base_url('auth/reset_password/' . $verification_code));
 
             $emailService->setFrom('fbccm@web-dev-project.com', 'FcCM test');
             $emailService->setTo($email);
 
-            $emailService->setSubject('Email Verification');
+            $emailService->setSubject(lang('Loginauth.messageResetPasswordAccountSubject'));
             //$message = '<p>Please click this link to verify your email: <a href="'.base_url('auth/verify/' . $verification_code).'"></a></p>';
             $emailService->setMessage($message);
 
@@ -560,7 +567,7 @@ class Auth extends Controller {
         $user = $this->userModel->where('token', $verification_code)->first();
 
         if ($user && strtotime($user['token_expires']) > time()) {
-            $data_page['email'] = $user['email'];
+            //$data_page['email'] = $user['email'];
             $data_page['user_id'] = $user['id'];
             $data_page['form_anchor'] = base_url('auth/reset_password_post');
 
@@ -599,8 +606,8 @@ class Auth extends Controller {
 
                 return view('welcome');
             } else {
+                //'email'   => $user['email'],
                 return view('reset_password', [
-                    'email'   => $user['email'],
                     'user_id' => $user['id'],
                     'error'   => 'Passwords do not match.',
                 ]);
