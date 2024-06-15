@@ -133,9 +133,8 @@ class Auth extends Controller {
             ];
 
             $this->userModel->save($data);
-            //$this->_send_verification_email($data['email'], $data['token']);
 
-            if ($this->_send_verification_email($get_form_post['first_name'], $get_form_post['email'], $data['token']) === true) {
+            if ($this->_send_verification_email($get_form_post['email'], $data['token']) === true) {
                 $template = "check_email";
                 $data_page['success_msg'] = 'Check your email for a verification link';
             } else {
@@ -143,57 +142,21 @@ class Auth extends Controller {
             }
 
             return view('loginauth/templates/' . $template, $data_page);
-            //return view('check_email');
         }
     }
 
-    private function _send_verification_email($first_name, $email, $verification_code): bool {
-        if (empty($first_name) or empty($email)) {
-            return false;
-        }
-
+    private function _send_verification_email($email, $verification_code): bool {
         $emailService = \Config\Services::email();
         $emailService->clear(true);
-        $email_status = false;
-
-        $configemail['SMTPHost'] = 'mail.adm.tools';
-        $configemail['SMTPUser'] = 'fbccm@web-dev-project.com';
-        $configemail['SMTPPass'] = '6AnSnC3v52';
-        $configemail['SMTPPort'] = 465;
-        $configemail['SMTPTimeout'] = 30;
-        $configemail['mailType'] = 'html';
-        $configemail['validate'] = true;
-        $configemail['priority'] = 3;
-        $configemail['SMTPKeepAlive'] = false;
-        $configemail['SMTPCrypto'] = 'ssl';
-
-        $emailService->initialize($configemail);
-
-        /*$message = '
-            <p>Hi ' . ucwords(strtolower($first_name)) . '</p>
-            <p>Complete verification and continue registration, confirm your email address. <a href="' . base_url('auth/verify/' . $verification_code) . '">Click this link to continue</a>.</p>
-        ';*/
 
         $message = sprintf(lang('Loginauth.messagePreRegisterAccountMessage'), base_url('auth/verify/' . $verification_code));
-
-        $emailService->setFrom('fbccm@web-dev-project.com', 'FcCM test');
         $emailService->setTo($email);
-
         $emailService->setSubject(lang('Loginauth.messagePreRegisterAccountSubject'));
         $emailService->setMessage($message);
-
-        //$emailService->send();
 
         if ($emailService->send()) {
             return true;
         }
-
-        /*if ($emailService->send(FALSE) === TRUE){
-            $email_status['status_send'] = true;
-        }else{
-            $email_status['status_send'] = false;
-            $email_status['log_send'] = $emailService->printDebugger(['headers']);
-        }*/
 
         return false;
     }
@@ -480,8 +443,6 @@ class Auth extends Controller {
             $data_page['error'] = 'Invalid credentials or email not verified.';
 
             return view('loginauth/templates/login_auth', $data_page);
-
-            //return view('loginauth/templates/login_auth', ['error' => 'Invalid credentials or email not verified.']);
         }
     }
 
@@ -515,36 +476,13 @@ class Auth extends Controller {
             ]);
 
             $emailService = \Config\Services::email();
-            $emailService->clear(true);
-            $email_status = false;
-
-            $configemail['SMTPHost'] = 'mail.adm.tools';
-            $configemail['SMTPUser'] = 'fbccm@web-dev-project.com';
-            $configemail['SMTPPass'] = '6AnSnC3v52';
-            $configemail['SMTPPort'] = 465;
-            $configemail['SMTPTimeout'] = 30;
-            $configemail['mailType'] = 'html';
-            $configemail['validate'] = true;
-            $configemail['priority'] = 3;
-            $configemail['SMTPKeepAlive'] = false;
-            $configemail['SMTPCrypto'] = 'ssl';
-
-            $emailService->initialize($configemail);
-
-            /*$message = '
-            <p>Hi ' . ucwords(strtolower($user['first_name'])) . '</p>
-            <p>Reset password. <a href="' . base_url('auth/reset_password/' . $verification_code) . '">Click this link to continue</a>.</p>';*/
 
             $message = sprintf(lang('Loginauth.messageResetPasswordAccountMessage'), base_url('auth/reset_password/' . $verification_code));
 
             $emailService->setFrom('fbccm@web-dev-project.com', 'FcCM test');
             $emailService->setTo($email);
-
             $emailService->setSubject(lang('Loginauth.messageResetPasswordAccountSubject'));
-            //$message = '<p>Please click this link to verify your email: <a href="'.base_url('auth/verify/' . $verification_code).'"></a></p>';
             $emailService->setMessage($message);
-
-            //$emailService->send();
 
             $emailService->send();
         }

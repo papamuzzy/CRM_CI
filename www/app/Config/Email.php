@@ -4,25 +4,26 @@ namespace Config;
 
 use CodeIgniter\Config\BaseConfig;
 
-class Email extends BaseConfig {
-    public string $fromEmail = '';
-    public string $fromName = '';
+class Email extends BaseConfig
+{
+    public string $fromEmail  = '';
+    public string $fromName   = '';
     public string $recipients = '';
 
     /**
      * The "user agent"
      */
-    public string $userAgent = 'FcCM CRM';
+    public string $userAgent = 'CodeIgniter';
 
     /**
      * The mail sending protocol: mail, sendmail, smtp
      */
-    public string $protocol = 'smtp';
+    public string $protocol = 'mail';
 
     /**
      * The server path to Sendmail.
      */
-    public string $mailPath = '';
+    public string $mailPath = '/usr/sbin/sendmail';
 
     /**
      * SMTP Server Hostname
@@ -42,12 +43,12 @@ class Email extends BaseConfig {
     /**
      * SMTP Port
      */
-    public int $SMTPPort = 465;
+    public int $SMTPPort = 25;
 
     /**
      * SMTP Timeout (in seconds)
      */
-    public int $SMTPTimeout = 60;
+    public int $SMTPTimeout = 5;
 
     /**
      * Enable persistent SMTP connections
@@ -61,7 +62,7 @@ class Email extends BaseConfig {
      *             to the server. 'ssl' means implicit SSL. Connection on port
      *             465 should set this to ''.
      */
-    public string $SMTPCrypto = 'ssl';
+    public string $SMTPCrypto = 'tls';
 
     /**
      * Enable word-wrap
@@ -76,7 +77,7 @@ class Email extends BaseConfig {
     /**
      * Type of mail, either 'text' or 'html'
      */
-    public string $mailType = 'html';
+    public string $mailType = 'text';
 
     /**
      * Character set (utf-8, iso-8859-1, etc.)
@@ -86,7 +87,7 @@ class Email extends BaseConfig {
     /**
      * Whether to validate the email address
      */
-    public bool $validate = true;
+    public bool $validate = false;
 
     /**
      * Email Priority. 1 = highest. 5 = lowest. 3 = normal
@@ -117,18 +118,4 @@ class Email extends BaseConfig {
      * Enable notify message from server
      */
     public bool $DSN = false;
-
-    public function __construct() {
-        parent::__construct();
-
-        $this->fromEmail = env('email.fromEmail', 'default-email@example.com');
-        $this->fromName = env('email.fromName', 'Default Name');
-        $this->userAgent = env('email.userAgent', 'CodeIgniter');
-        $this->protocol = env('email.protocol', 'smtp');
-        $this->SMTPHost = env('email.SMTPHost', 'smtp.example.com');
-        $this->SMTPUser = env('email.SMTPUser', 'user@example.com');
-        $this->SMTPPass = env('email.SMTPPass', 'default_password');
-        $this->SMTPPort = env('email.SMTPPort', 587);
-        $this->SMTPCrypto = env('email.SMTPCrypto', 'tls');
-    }
 }

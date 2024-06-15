@@ -44,4 +44,18 @@ class UniqueChecker
 
         return $results;
     }
+
+    /**
+     * Проверяет уникальность поля в модели.
+     *
+     * @param \CodeIgniter\Model $model  Модель для проверки уникальности.
+     * @param string             $field  Имя поля для проверки.
+     * @param mixed              $value  Значение поля.
+     *
+     * @return bool Результат проверки уникальности true - уникально, false - Не уникально
+     */
+    public function isUnique(\CodeIgniter\Model $model, string $field, mixed $value): bool {
+        $exists = $model->where($field, $value)->first();
+        return $exists === null;
+    }
 }
