@@ -1,10 +1,9 @@
 <?php namespace App\Controllers;
 
 use App\Libraries\UniqueChecker;
-use CodeIgniter\Controller;
 use App\Models\User;
 
-class Auth extends Controller {
+class Auth extends BaseController {
     /**
      * @var \App\Models\User
      */
