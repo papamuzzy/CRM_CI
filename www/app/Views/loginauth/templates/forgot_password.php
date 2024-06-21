@@ -28,6 +28,7 @@
                         </div>
                     <?php endif; ?>
 
+                    <?php if (empty($not_verified) && empty($count_too_big) && empty($email_count_too_big)): ?>
                     <div id="login-form-auth" class="login_form_auth">
                         <?php if (!empty($form_anchor) and is_string($form_anchor)) : ?>
                         <?= form_open($form_anchor, array('id' => 'form-login-register', 'class'=>'form_login_auth', 'autocomplete'=>'off')) ?> 
@@ -52,6 +53,20 @@
                             </div>
                         <?php endif; ?>
                     </div><!-- #login-form-auth -->
+                    <?php elseif (!empty($not_verified)): ?>
+                    <div>
+                        <div>Sorry, you are not verified yet!</div>
+                        <div><a href="<?= base_url("auth/register") ?>">Register</a> </div>
+                    </div>
+                    <?php elseif (!empty($count_too_big)): ?>
+                        <div>
+                            <div><?= $count_too_big ?></div>
+                        </div>
+                    <?php elseif (!empty($email_count_too_big)): ?>
+                        <div>
+                            <div><?= $email_count_too_big ?></div>
+                        </div>
+                    <?php endif; ?>
                 </div>
             </div><!-- .login_form_bi_lw -->
         </div><!-- .login_form_fw -->

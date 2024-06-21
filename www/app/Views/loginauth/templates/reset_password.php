@@ -28,7 +28,6 @@
                     <div id="login-form-auth" class="login_form_auth">
                         <?php if (!empty($form_anchor) and is_string($form_anchor)) : ?>
                         <?= form_open($form_anchor, array('id' => 'form-login-register', 'class'=>'form_login_auth', 'autocomplete'=>'off')) ?>
-                            <input type="hidden" name="user_id" value="<?= $user_id; ?>">
                             <div class="row form_row">
                                 <div class="col form_col">
                                     <label for="email" class="form-label">Email</label>

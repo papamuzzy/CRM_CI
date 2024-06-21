@@ -1,35 +1,59 @@
 <?php namespace App\Controllers;
 
-use App\Libraries\UniqueChecker;
-use App\Models\User;
+use CodeIgniter\Cookie\Cookie;
+use DateTime;
+use CodeIgniter\HTTP\RequestInterface;
+use CodeIgniter\HTTP\ResponseInterface;
+use Psr\Log\LoggerInterface;
 
 class Auth extends BaseController {
+    private $user;
+
     /**
-     * @var \App\Models\User
+     * @var \App\Models\UserClientModel
      */
-    private User $userModel;
-    private UniqueChecker $uniqueChecker;
+    private $userModel;
 
-    public function __construct() {
-        // Загружаем модель пользователя
-        $this->userModel = new User();
-        $this->uniqueChecker = new UniqueChecker();
-    }
+    /**
+     * @var \App\Models\UserClientPrivateModel
+     */
+    private $userPrivateModel;
 
-    public function register(): string {
+    /**
+     * @param \CodeIgniter\HTTP\RequestInterface  $request
+     * @param \CodeIgniter\HTTP\ResponseInterface $response
+     * @param \Psr\Log\LoggerInterface            $logger
+     *
+     * @return void
+     */
+    public function initController(RequestInterface $request, ResponseInterface $response, LoggerInterface $logger): void {
+        // Do Not Edit This Line
+        parent::initController($request, $response, $logger);
+
+        $this->userModel = model('UserClientModel');
+        $this->userPrivateModel = model('UserClientPrivateModel');
+
         helper(['form']);
 
-        $template = "register_account";
-        $get_form_post = false;
+        $this->user = new UserClient();
+    }
 
+    /**
+     * @throws \ReflectionException
+     */
+    public function register(): \CodeIgniter\HTTP\RedirectResponse|string {
         $data_page = [
             'title'       => lang('Loginauth.titleLoginRegister') . " - " . lang('Loginauth.defSignTitle'),
             'description' => lang('Loginauth.descriptionLoginRegister') . " - " . lang('Loginauth.defSignTitle'),
             'form_anchor' => base_url('auth/register'),
         ];
 
+        $error = $this->session->getFlashData('register_error');
+        if ($error !== null) {
+            $data_page['error'] = $error;
+        }
         if (!$this->request->is('post')) {
-            return view('loginauth/templates/' . $template, $data_page);
+            return view('loginauth/templates/register_account', $data_page);
         }
 
         $validation = \Config\Services::validation();
@@ -65,90 +89,101 @@ class Auth extends BaseController {
                 ],
             ],
             'email'        => [
-                //'rules'  => 'required|valid_email|is_unique[users.email]',
                 'label'  => 'Email',
                 'rules'  => 'required|valid_email|max_length[250]',
                 'errors' => [
                     'required'    => 'Email is required',
                     'valid_email' => 'Email must be valid',
-                    //'is_unique'   => 'Email already exists',
+                    'max_length'  => 'Email cannot exceed 250 characters',
                 ],
             ],
         ];
 
         $get_form_post = $this->request->getPost(null, FILTER_SANITIZE_FULL_SPECIAL_CHARS);
-        //$get_form_post = $this->request->getPost();
-
-        //if (!$this->validate($rules)) {
         if (!$this->validateData($get_form_post, $rules)) {
             // Если валидация не прошла, возвращаемся к форме с ошибками
-
-            //$data_page['validation'] = $this->validator;
             $data_page['validation'] = $validation->getErrors();
             $data_page['form_data'] = $get_form_post;
 
-            return view('loginauth/templates/' . $template, $data_page);
+            return view('loginauth/templates/register_account', $data_page);
         } else {
             $get_form_post = $validation->getValidated();
 
             if (empty($get_form_post) or !is_array($get_form_post)) {
                 $data_page['error'] = 'Data not found, try again.';
 
-                return view('loginauth/templates/' . $template, $data_page);
+                return view('loginauth/templates/register_account', $data_page);
             }
 
-            //$res = $this->uniqueChecker->checkUnique($this->userModel, $this->request->getPost(), ['email',]);
-            $res = $this->uniqueChecker->checkUnique($this->userModel, $get_form_post, ['email',]);
-            if (!$res['email']) {
+            if (!$this->userPrivateModel->isUniqueEmail($get_form_post['email'])) {
                 $data_page['error'] = 'Email already exists';
                 $data_page['form_data'] = $get_form_post;
 
-                return view('loginauth/templates/' . $template, $data_page);
+                return view('loginauth/templates/register_account', $data_page);
             }
 
-            $verification_code = md5(rand());
-            $verification_expires = date('Y-m-d H:i:s', strtotime('+1 hour')); // Срок действия 1 час
-
-            /*$data = [
-                'company'       => $this->request->getPost('сompany_name'),
-                'first_name'    => $this->request->getPost('first_name'),
-                'last_name'     => $this->request->getPost('last_name'),
-                'email'         => $this->request->getPost('email'),
-                'verified'      => 0,
-                'token'         => $verification_code,
-                'token_type'    => 'register',
-                'token_expires' => $verification_expires,
-            ];*/
-
-            $data = [
-                'company'       => !empty($get_form_post['сompany_name']) ? $get_form_post['сompany_name'] : null,
-                'first_name'    => !empty($get_form_post['first_name']) ? $get_form_post['first_name'] : null,
-                'last_name'     => !empty($get_form_post['last_name']) ? $get_form_post['last_name'] : null,
-                'email'         => !empty($get_form_post['email']) ? $get_form_post['email'] : null,
-                'verified'      => 0,
-                'token'         => $verification_code,
-                'token_type'    => 'register',
-                'token_expires' => $verification_expires,
-            ];
-
-            $this->userModel->save($data);
-
-            if ($this->_send_verification_email($get_form_post['email'], $data['token']) === true) {
-                $template = "check_email";
-                $data_page['success_msg'] = 'Check your email for a verification link';
+            $user = $this->userPrivateModel->where('email', $get_form_post['email'])->where('verified', 0)->first();
+            if ($user === null) {
+                $user = $this->userPrivateModel->createUser($get_form_post['email']);
             } else {
-                $data_page['error'] = 'Something strange happened, try again in a few minutes.';
+                $user = $this->userPrivateModel->updateVerificationCode($user['id']);
             }
 
-            return view('loginauth/templates/' . $template, $data_page);
+            if (!empty($user['verification_code']) && $user['verifies_count'] < 4) {
+                $data = [
+                    'id'         => $user['id'],
+                    'company'    => $get_form_post['сompany_name'],
+                    'first_name' => $get_form_post['first_name'],
+                    'last_name'  => $get_form_post['last_name'],
+                ];
+
+                $this->userModel->save($data);
+
+                if ($this->_send_verification_email($get_form_post['email'], $user['verification_code']) === true) {
+                    $cookie = new Cookie(
+                        'token',
+                        $user['token'],
+                        [
+                            'expires'  => new DateTime('+2 hours'),
+                            'samesite' => Cookie::SAMESITE_LAX,
+                        ]
+                    );
+                    set_cookie($cookie);
+
+                    $session_data = [
+                        'user_id'     => $user['id'],
+                        'token'       => $user['token'],
+                        'user_group'  => 'client',
+                        'success_msg' => 'Check your email for a verification link',
+                    ];
+                    $this->session->markAsFlashdata('success_msg');
+                    $this->session->set($session_data);
+                    return redirect()->to('auth/register-success');
+                } else {
+                    $data_page['error'] = 'Something strange happened, try again in a few minutes.';
+                }
+            } else {
+                $data_page['error'] = 'You have exhausted your registration attempts. The next attempt is possible after 24 hours.';
+            }
+            return view('loginauth/templates/register_account', $data_page);
         }
+    }
+
+    public function registerSuccess(): string {
+        $data_page = [
+            'title'       => lang('Loginauth.titleLoginRegisterSuccess') . " - " . lang('Loginauth.defSignTitle'),
+            'description' => lang('Loginauth.descriptionLoginRegisterSuccess') . " - " . lang('Loginauth.defSignTitle'),
+        ];
+        if (($success_msg = $this->session->getFlashData('success_msg')) !== null) {
+            $data_page['success_msg'] = $success_msg;
+        }
+        return view('loginauth/templates/check_email', $data_page);
     }
 
     private function _send_verification_email($email, $verification_code): bool {
         $emailService = \Config\Services::email();
-        $emailService->clear(true);
 
-        $message = sprintf(lang('Loginauth.messagePreRegisterAccountMessage'), base_url('auth/verify/' . $verification_code));
+        $message = sprintf(lang('Loginauth.messagePreRegisterAccountMessage'), base_url('auth/register-verify/' . $verification_code));
         $emailService->setTo($email);
         $emailService->setSubject(lang('Loginauth.messagePreRegisterAccountSubject'));
         $emailService->setMessage($message);
@@ -163,25 +198,32 @@ class Auth extends BaseController {
     /**
      * @throws \ReflectionException
      */
-    public function verify($verification_code) {
-        helper(['form']);
-
-        // TODO: На даний момент, лінк з токеном можна відкрити в іншому браузері, маю на увазі що доступ до лінку може мати третя особа, тому потрібно буде привʼязати до юзера цей токен
-        // TODO: Потрібна валідація токену
-
+    public function registerVerify($verification_code): \CodeIgniter\HTTP\RedirectResponse|string {
         $data_page = [
             'title'       => lang('Loginauth.titleLoginCreate') . " - " . lang('Loginauth.defSignTitle'),
             'description' => lang('Loginauth.descriptionLoginCreate') . " - " . lang('Loginauth.defSignTitle'),
         ];
 
-        $user = $this->userModel->where('token', $verification_code)->first();
+        $user_id = $this->user->getId();
+        $error = $this->user->getError();
+        if (empty($user_id) || !empty($error)) {
+            $session_data = [
+                'register_error' => $error,
+            ];
+            $this->session->markAsFlashdata('register_error');
+            $this->session->set($session_data);
+            return redirect()->to('auth/register');
+        }
+
+        $user = $this->userPrivateModel->find($user_id);
+        $user = array_merge($user, $this->userModel->find($user_id));
 
         if ($user) {
             $current_time = date('Y-m-d H:i:s');
             if ($current_time < $user['token_expires']) {
-                $data_page['form_anchor'] = base_url('auth/complete-registration-post');
+                $data_page['form_anchor'] = base_url('auth/complete-registration');
 
-                $this->userModel->update($user['id'], ['verified' => 1]);
+                $this->userPrivateModel->update($user['id'], ['verified' => 1]);
                 $data_page['form_data'] = [
                     'first_name' => $user['first_name'],
                     'last_name'  => $user['last_name'],
@@ -190,76 +232,39 @@ class Auth extends BaseController {
                 ];
                 return view('loginauth/templates/create_account', $data_page);
             } else {
-                $data_page['form_anchor'] = base_url('auth/register');
-                $data_page['error'] = 'Verification code has expired. Please register again.';
-                return view('loginauth/templates/register_account', $data_page);
+                $session_data = [
+                    'register_error' => 'Verification code has expired. Please register again.',
+                ];
+                $this->session->markAsFlashdata('register_error');
+                $this->session->set($session_data);
+                return redirect()->to('auth/register');
             }
         } else {
-            //echo 'Invalid verification code';
-            $data_page['form_anchor'] = base_url('auth/register');
-            $data_page['error'] = 'Invalid verification code';
-            return view('loginauth/templates/register_account', $data_page);
+            $session_data = [
+                'register_error' => 'Invalid verification code',
+            ];
+            $this->session->markAsFlashdata('register_error');
+            $this->session->set($session_data);
+            return redirect()->to('auth/register');
         }
     }
 
-    public function complete_registration_post(): string {
-        helper(['form']);
-
+    public function completeRegistration(): \CodeIgniter\HTTP\RedirectResponse|string {
         $data_page = [
             'title'       => lang('Loginauth.titleLoginCreate') . " - " . lang('Loginauth.defSignTitle'),
             'description' => lang('Loginauth.descriptionLoginCreate') . " - " . lang('Loginauth.defSignTitle'),
-            'form_anchor' => base_url('auth/complete-registration-post'),
+            'form_anchor' => base_url('auth/complete-registration'),
         ];
 
         $user_id = $this->request->getPost('user_id');
 
-        $get_form_post = false;
         $template = "create_account";
-
-        /*if (!$this->request->is('post')) {
-            //return redirect()->to(base_url('auth/register')); 
-            return view('loginauth/templates/register_account', $data_page);
-        }*/
 
         $validation = \Config\Services::validation();
 
         $user = $this->userModel->where('id', $user_id)->first();
 
         if ($user && strtotime($user['token_expires']) > time()) {
-
-            // TODO: ці поля ми не будемо вже міняти на другій формі реєстрації, але поки нехай виводяться в інпутах
-            /*'first_name'                => [
-                'label'  => 'First name',
-                'rules'  => 'required|alpha_numeric_space|min_length[3]|max_length[150]',
-                'errors' => [
-                    'required'   => 'First name is required',
-                    'alpha'      => 'First name must contain only alphabetic characters',
-                    'min_length' => 'First name must be at least 3 characters long',
-                    'max_length' => 'First name cannot exceed 50 characters',
-                ],
-            ],
-            'last_name'                 => [
-                'label'  => 'Last name',
-                'rules'  => 'required|alpha_numeric_space|min_length[3]|max_length[150]',
-                'errors' => [
-                    'required'   => 'Last name is required',
-                    'alpha'      => 'Last name must contain only alphabetic characters',
-                    'min_length' => 'Last name must be at least 3 characters long',
-                    'max_length' => 'Last name cannot exceed 50 characters',
-                ],
-            ],
-            'email'                     => [
-                //'rules'  => 'required|valid_email|is_unique[users.email]',
-                'label'  => 'Email',
-                'rules'  => 'required|valid_email|max_length[250]',
-                'errors' => [
-                    'required'    => 'Email is required',
-                    'valid_email' => 'Email must be valid',
-                    //'is_unique'   => 'Email already exists',
-                ],
-            ],*/
-            //END TODO
-
             $rules = [
                 'website_url'               => [
                     'label'  => 'Website',
@@ -331,16 +336,12 @@ class Auth extends BaseController {
             ];
 
             $get_form_post = $this->request->getPost(null, FILTER_SANITIZE_FULL_SPECIAL_CHARS);
-            //$get_form_post = $this->request->getPost();
 
-            //if (!$this->validate($rules)) {
             if (!$this->validateData($get_form_post, $rules)) {
-                //$data_page['validation'] = $this->validator;
-
                 $data_page['validation'] = $validation->getErrors();
                 $data_page['form_data'] = $get_form_post;
 
-                return view('loginauth/templates/' . $template, $data_page);
+                return view('loginauth/templates/create_account', $data_page);
             } else {
                 $get_counties_worked = $get_work_type = false;
 
@@ -349,27 +350,15 @@ class Auth extends BaseController {
                 if (empty($get_form_post) or !is_array($get_form_post)) {
                     $data_page['error'] = 'Data not found, try again.';
 
-                    return view('loginauth/templates/' . $template, $data_page);
+                    return view('loginauth/templates/create_account', $data_page);
                 }
 
-                //$res = $this->uniqueChecker->checkUnique($this->userModel, $this->request->getPost(), ['phone',]);
-                $res = $this->uniqueChecker->checkUnique($this->userModel, $get_form_post, ['phone',]);
-                if (!$res['phone']) {
+                if (!isUnique($this->userModel, 'phone', $this->request->getPost()['phone'])) {
                     $data_page['error'] = 'Phone number already exists';
                     $data_page['form_data'] = $this->request->getPost();
 
-                    //return view('complete_registration', $data_page);
-                    return view('loginauth/templates/' . $template, $data_page);
+                    return view('loginauth/templates/create_account', $data_page);
                 }
-
-                /*$this->userModel->update($user['id'], [
-                    'phone'         => $this->request->getPost('phone'),
-                    'password'      => password_hash($this->request->getPost('password'), PASSWORD_BCRYPT),
-                    'verified'      => 1,
-                    'token'         => null,
-                    'token_type'    => null,
-                    'token_expires' => null,
-                ]);*/
 
                 if (is_array($get_form_post['counties_worked'])) {
                     $get_counties_worked = json_encode($get_form_post['counties_worked']);
@@ -386,20 +375,29 @@ class Auth extends BaseController {
                     'work_type'                 => !empty($get_work_type) ? $get_work_type : null,
                     'how_did_you_hear_about_us' => !empty($get_form_post['how_did_you_hear_about_us']) ? $get_form_post['how_did_you_hear_about_us'] : null,
                     'phone'                     => !empty($get_form_post['phone']) ? $get_form_post['phone'] : null,
-                    'password'                  => password_hash($get_form_post['password'], PASSWORD_BCRYPT),
-                    'verified'                  => 1,
-                    'token'                     => null,
-                    'token_type'                => null,
-                    'token_expires'             => null,
+                ]);
+                $this->userPrivateModel->update($user['id'], [
+                    'password'      => password_hash($get_form_post['password'], PASSWORD_BCRYPT),
+                    'verified'      => 1,
+                    'token'         => null,
+                    'token_type'    => null,
+                    'token_expires' => null,
                 ]);
 
-                return view('welcome');
+                return redirect()->to('welcome');
             }
         } else {
-            $data_page['error'] = 'Invalid or expired verification code.';
-            return view('loginauth/templates/register_account', $data_page);
-            //return view('loginauth/templates/register_account', ['error' => 'Invalid or expired verification code.']);
+            $session_data = [
+                'register_error' => 'Invalid or expired verification code.',
+            ];
+            $this->session->markAsFlashdata('register_error');
+            $this->session->set($session_data);
+            return redirect()->to('auth/register');
         }
+    }
+
+    public function welcome(): string {
+        return view('welcome');
     }
 
     public function payment(): string {
@@ -407,151 +405,296 @@ class Auth extends BaseController {
         return view('welcome');
     }
 
-    public function login(): string {
-        helper(['form']);
-
+    public function login(): \CodeIgniter\HTTP\RedirectResponse|string {
         $data_page = [
             'title'       => lang('Loginauth.titleLoginAuth') . " - " . lang('Loginauth.defSignTitle'),
             'description' => lang('Loginauth.descriptionLoginAuth') . " - " . lang('Loginauth.defSignTitle'),
-            'form_anchor' => base_url('auth/login_post'),
+            'form_anchor' => base_url('auth/login'),
         ];
-        return view('loginauth/templates/login_auth', $data_page);
-    }
 
-    public function login_post(): string {
-
-        helper(['form']);
+        if (!$this->request->is('post')) {
+            return view('loginauth/templates/login_auth', $data_page);
+        }
 
         // TODO: Потрібна валідація
 
-        $data_page = [
-            'title'       => lang('Loginauth.titleLoginAuth') . " - " . lang('Loginauth.defSignTitle'),
-            'description' => lang('Loginauth.descriptionLoginAuth') . " - " . lang('Loginauth.defSignTitle'),
-            'form_anchor' => base_url('auth/login_post'),
+        $validation = \Config\Services::validation();
+        $rules = [
+            'email'    => [
+                'label'  => 'Email',
+                'rules'  => 'required|valid_email|max_length[250]',
+                'errors' => [
+                    'required'    => 'Email is required',
+                    'valid_email' => 'Email must be valid',
+                    'max_length'  => 'Email cannot exceed 250 characters',
+                ],
+            ],
+            'password' => [
+                'rules'  => 'required|min_length[8]|max_length[15]',
+                'errors' => [
+                    'required'   => 'Password is required',
+                    'min_length' => 'Password must be at least 8 characters long',
+                    'max_length' => 'Password cannot exceed 15 characters',
+                ],
+            ],
         ];
+        $get_form_post = $this->request->getPost(null, FILTER_SANITIZE_FULL_SPECIAL_CHARS);
+
+        if (!$this->validateData($get_form_post, $rules)) {
+            $data_page['validation'] = $validation->getErrors();
+            $data_page['form_data'] = $get_form_post;
+
+            return view('loginauth/templates/login_auth', $data_page);
+        }
 
         $email = $this->request->getPost('email');
         $password = $this->request->getPost('password');
 
-        $user = $this->userModel->where('email', $email)->first();
+        $user = $this->userPrivateModel->where('email', $email)->first();
 
         if ($user && password_verify($password, $user['password']) && $user['verified']) {
-            return view('welcome');
-        } else {
-            
-            $data_page['error'] = 'Invalid credentials or email not verified.';
+            // ToDo add session and cookie
+            $cookie = new Cookie(
+                'token',
+                $user['token'],
+                [
+                    'expires'  => new DateTime('+2 hours'),
+                    'samesite' => Cookie::SAMESITE_LAX,
+                ]
+            );
+            set_cookie($cookie);
 
+            $session_data = [
+                'user_id'    => $user['id'],
+                'token'      => $user['token'],
+                'user_group' => 'client',
+            ];
+            $this->session->set($session_data);
+            return redirect()->to('welcome');
+        } else {
+            $data_page['error'] = 'Invalid credentials or email not verified.';
+            $data_page['form_data'] = $get_form_post;
             return view('loginauth/templates/login_auth', $data_page);
         }
     }
 
-    public function request_password_reset(): string {
-        helper(['form']);
-
-        // TODO: Після першої форми, верефікації емейлу, юзер може не завершивши реєстрацію, скористатись скиданням пароля, це потрібно пофіксити, юзер не може скидати пароль заповнивши лише першу форму реєстрації, не закінчивши реєстрацію
+    public function requestPasswordReset(): \CodeIgniter\HTTP\RedirectResponse|string {
+        // TODO: Після першої форми, верифікації емейлу, юзер може не завершивши реєстрацію, скористатись скиданням пароля, це потрібно пофіксити, юзер не може скидати пароль заповнивши лише першу форму реєстрації, не закінчивши реєстрацію
+        // ToDo ця перевірка можлива тільки після введення емейлу
 
         $data_page = [
             'title'       => lang('Loginauth.titleLoginResetPass') . " - " . lang('Loginauth.defSignTitle'),
             'description' => lang('Loginauth.descriptionLoginResetPass') . " - " . lang('Loginauth.defSignTitle'),
-            'form_anchor' => base_url('auth/send_password_reset_email'),
+            'form_anchor' => base_url('auth/password-reset'),
         ];
-        return view('loginauth/templates/forgot_password', $data_page);
-    }
 
-    public function send_password_reset_email(): string {
+        $error = $this->session->getFlashData('register_error');
+        if ($error !== null) {
+            $data_page['error'] = $error;
+        }
+        if (!$this->request->is('post')) {
+            return view('loginauth/templates/forgot_password', $data_page);
+        }
+
+        $validation = \Config\Services::validation();
+        $rules = [
+            'email' => [
+                'label'  => 'Email',
+                'rules'  => 'required|valid_email|max_length[250]',
+                'errors' => [
+                    'required'    => 'Email is required',
+                    'valid_email' => 'Email must be valid',
+                    'max_length'  => 'Email cannot exceed 250 characters',
+                ],
+            ],
+        ];
+        $get_form_post = $this->request->getPost(null, FILTER_SANITIZE_FULL_SPECIAL_CHARS);
+        $data_page['form_data'] = $get_form_post;
+
+        if (!$this->validateData($get_form_post, $rules)) {
+            $data_page['validation'] = $validation->getErrors();
+
+            return view('loginauth/templates/forgot_password', $data_page);
+        }
+
         $email = $this->request->getPost('email');
-        $user = $this->userModel->where('email', $email)->first();
+        $user = $this->userPrivateModel->where('email', $email)->first();
 
         // TODO: Потрібно тут переробити логіку, наприклад якщо юзера нема то повертати на сторінку відновлення, без відображення форми але з повідомленням що лист наліслано
+        // ToDo Це буде обман юзера, думаю краще повідомити, що емейл не існує й знову видати форму. При цьому рахувати кількість попиток. Якщо з третього разу не вгадав — блокуємо.
 
         if ($user) {
-            $verification_code = md5(rand());
-            $verification_expires = date('Y-m-d H:i:s', strtotime('+1 hour')); // Срок действия 1 час
+            if (!$user['verified']) {
+                $data_page['not_verified'] = true;
+                return view('loginauth/templates/forgot_password', $data_page);
+            }
 
-            $this->userModel->update($user['id'], [
-                'token'         => $verification_code,
-                'token_type'    => 'reset',
-                'token_expires' => $verification_expires,
-            ]);
+            $user = $this->userPrivateModel->updateVerificationCode($user['id']);
+            if (empty($user['verification_code']) && $user['verifies_count'] > 3) {
+                $data_page['count_too_big'] = 'You have exhausted your registration attempts. The next attempt is possible after 24 hours.';
+                return view('loginauth/templates/forgot_password', $data_page);
+            }
 
             $emailService = \Config\Services::email();
 
-            $message = sprintf(lang('Loginauth.messageResetPasswordAccountMessage'), base_url('auth/reset_password/' . $verification_code));
+            $message = sprintf(lang('Loginauth.messageResetPasswordAccountMessage'), base_url('auth/password-verify/' . $user['verification_code']));
 
-            $emailService->setFrom('fbccm@web-dev-project.com', 'FcCM test');
             $emailService->setTo($email);
             $emailService->setSubject(lang('Loginauth.messageResetPasswordAccountSubject'));
             $emailService->setMessage($message);
 
-            $emailService->send();
+            if ($emailService->send()) {
+                $cookie = new Cookie(
+                    'token',
+                    $user['token'],
+                    [
+                        'expires'  => new DateTime('+2 hours'),
+                        'samesite' => Cookie::SAMESITE_LAX,
+                    ]
+                );
+                set_cookie($cookie);
+
+                $session_data = [
+                    'user_id'    => $user['id'],
+                    'token'      => $user['token'],
+                    'user_group' => 'client',
+                ];
+                $this->session->set($session_data);
+
+                return view('check_email');
+            } else {
+                $data_page['error'] = 'Something strange happened, try again in a few minutes.';
+                return view('loginauth/templates/forgot_password', $data_page);
+            }
         }
 
-        return view('check_email');
+        $email_not_found_count = $this->session->get('email_not_found_count') ?? 0;
+        $this->session->set('email_not_found_count', ++$email_not_found_count);
+        if ($email_not_found_count > 3) {
+            $data_page['email_count_too_big'] = 'You have exhausted your email error attempts. The next attempt is possible after 2 hours.';
+        }
+        $data_page['error'] = 'Email not found!';
+        return view('loginauth/templates/forgot_password', $data_page);
     }
 
-    public function reset_password($verification_code): string {
-        helper(['form']);
-
+    public function passwordVerify($verification_code): \CodeIgniter\HTTP\RedirectResponse|string {
         // TODO: Та сама ситуація, лінк з токеном доступний на інший пристроях та браузерах, потрібно переробити логіку привʼязки токену суто для конкретного юзера. Емейл не потрібно виводити але поле нехай буде, нехай юзер вводить свій емейл, для того щоб підтвердити.
         // TODO: Потрібна валідація токену
 
+        $user_id = $this->user->getId();
+        $error = $this->user->getError();
+        if (empty($user_id) || !empty($error)) {
+            $session_data = [
+                'register_error' => $error,
+            ];
+            $this->session->markAsFlashdata('register_error');
+            $this->session->set($session_data);
+            return redirect()->to('auth/password-reset');
+        }
+
         $data_page = [
             'title'       => lang('Loginauth.titleLoginResetPass') . " - " . lang('Loginauth.defSignTitle'),
             'description' => lang('Loginauth.descriptionLoginResetPass') . " - " . lang('Loginauth.defSignTitle'),
-            'form_anchor' => base_url('auth/send_password_reset_email'),
+            'form_anchor' => base_url('auth/password-verify'),
         ];
 
-        $user = $this->userModel->where('token', $verification_code)->first();
+        $user = $this->userPrivateModel->find($user_id);
 
-        if ($user && strtotime($user['token_expires']) > time()) {
-            //$data_page['email'] = $user['email'];
-            $data_page['user_id'] = $user['id'];
-            $data_page['form_anchor'] = base_url('auth/reset_password_post');
-
+        if ($user && time() < $user['verification_code_expires'] && $user['verification_code'] == $verification_code) {
             return view('loginauth/templates/reset_password', $data_page);
-            //return view('reset_password', ['email' => $user['email'], 'verification_code' => $verification_code]);
         } else {
-            $data_page['error'] = 'Invalid or expired reset code.';
-            return view('loginauth/templates/forgot_password', $data_page);
+            $session_data = [
+                'register_error' => 'Invalid or expired reset code.',
+            ];
+            $this->session->markAsFlashdata('register_error');
+            $this->session->set($session_data);
+            return redirect()->to('auth/auth/password-reset');
         }
     }
 
-    public function reset_password_post(): string {
-
-        // TODO: Потрібна валідація
-
+    /**
+     * @throws \ReflectionException
+     */
+    public function passwordVerifyPost(): \CodeIgniter\HTTP\RedirectResponse|string {
         $data_page = [
             'title'       => lang('Loginauth.titleLoginResetPass') . " - " . lang('Loginauth.defSignTitle'),
             'description' => lang('Loginauth.descriptionLoginResetPass') . " - " . lang('Loginauth.defSignTitle'),
             'form_anchor' => base_url('auth/send_password_reset_email'),
         ];
 
-        $user_id = $this->request->getPost('user_id');
-        $user = $this->userModel->where('id', $user_id)->first();
+        $user_id = $this->user->getId();
+        $error = $this->user->getError();
+        if (empty($user_id) || !empty($error)) {
+            $session_data = [
+                'register_error' => $error,
+            ];
+            $this->session->markAsFlashdata('register_error');
+            $this->session->set($session_data);
+            return redirect()->to('auth/password-reset');
+        }
+
+        // TODO: Потрібна валідація
+        $validation = \Config\Services::validation();
+        $rules = [
+            'email'            => [
+                'label'  => 'Email',
+                'rules'  => 'required|valid_email|max_length[250]',
+                'errors' => [
+                    'required'    => 'Email is required',
+                    'valid_email' => 'Email must be valid',
+                    'max_length'  => 'Email cannot exceed 250 characters',
+                ],
+            ],
+            'password'         => [
+                'rules'  => 'required|min_length[8]|max_length[15]',
+                'errors' => [
+                    'required'   => 'Password is required',
+                    'min_length' => 'Password must be at least 8 characters long',
+                    'max_length' => 'Password cannot exceed 15 characters',
+                ],
+            ],
+            'confirm_password' => [
+                'rules'  => 'required|min_length[8]|max_length[15]|matches[password]',
+                'errors' => [
+                    'required'   => 'Confirm Password is required',
+                    'min_length' => 'Confirm Password must be at least 8 characters long',
+                    'max_length' => 'Confirm Password cannot exceed 15 characters',
+                    'matches'    => 'Confirm Password does not match with Password',
+                ],
+            ],
+        ];
+        $get_form_post = $this->request->getPost(null, FILTER_SANITIZE_FULL_SPECIAL_CHARS);
+        $data_page['form_data'] = $get_form_post;
+
+        if (!$this->validateData($get_form_post, $rules)) {
+            $data_page['validation'] = $validation->getErrors();
+
+            return view('loginauth/templates/reset_password', $data_page);
+        }
+
+        $user = $this->userPrivateModel->find($user_id);
 
         if ($user) {
-            $new_password = $this->request->getPost('new_password');
-            $confirm_password = $this->request->getPost('confirm_password');
-
-            if ($new_password === $confirm_password) {
-                $this->userModel->update($user['id'], [
-                    'password'      => password_hash($new_password, PASSWORD_BCRYPT),
-                    'token'         => null,
-                    'token_type'    => null,
-                    'token_expires' => null,
+            if ($get_form_post['new_password'] === $get_form_post['confirm_password']) {
+                $this->userPrivateModel->update($user['id'], [
+                    'password'                  => password_hash($get_form_post['new_password'], PASSWORD_BCRYPT),
+                    'verification_code'         => null,
+                    'verification_code_expires' => null,
+                    'verifies_count'            => 0,
                 ]);
 
                 return view('welcome');
             } else {
-                //'email'   => $user['email'],
-                return view('reset_password', [
-                    'user_id' => $user['id'],
-                    'error'   => 'Passwords do not match.',
-                ]);
+                $data_page['error'] = 'Password does not match';
+                return view('loginauth/templates/reset_password', $data_page);
             }
         } else {
-            $data_page['error'] = 'Invalid or expired reset code.';
-            return view('loginauth/templates/forgot_password', $data_page);
+            $session_data = [
+                'register_error' => 'Invalid or expired reset code.',
+            ];
+            $this->session->markAsFlashdata('register_error');
+            $this->session->set($session_data);
+            return redirect()->to('auth/auth/password-reset');
         }
     }
 }

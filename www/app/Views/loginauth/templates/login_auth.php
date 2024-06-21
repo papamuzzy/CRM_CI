@@ -60,7 +60,7 @@
                             </div>
                             <div class="col form_login_col_lnk">
                                 <div class="form_login_lnk">
-                                    <a href="<?= base_url("auth/request_password_reset") ?>">Forgot Password?</a>
+                                    <a href="<?= base_url("auth/password-reset") ?>">Forgot Password?</a>
                                 </div>
                             </div>
                         </div>

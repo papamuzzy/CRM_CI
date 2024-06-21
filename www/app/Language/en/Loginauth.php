@@ -5,6 +5,8 @@ return [
     'defSignTitle' => 'Freedom Code Complaince',
     'titleLoginRegister' => 'Register Account',
     'descriptionLoginRegister' => 'Register Account',
+    'titleLoginRegisterSuccess' => 'Register Account Successfully',
+    'descriptionLoginRegisterSuccess' => 'Register Account Successfully',
     'titleLoginCreate' => 'Create Account',
     'descriptionLoginCreate' => 'Create Account',
     'titleLoginAuth' => 'Login Auth',

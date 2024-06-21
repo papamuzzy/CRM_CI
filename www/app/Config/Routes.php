@@ -7,16 +7,22 @@ use CodeIgniter\Router\RouteCollection;
  */
 $routes->get('/', 'Home::index');
 //$routes->get('/test-db', 'DbTest::index');
+// Auth Register
 $routes->get('auth/register', 'Auth::register');
 $routes->post('auth/register', 'Auth::register');
-$routes->get('auth/verify/(:any)', 'Auth::verify/$1');
+$routes->get('auth/register-success', 'Auth::registerSuccess');
+$routes->get('auth/register-verify/(:any)', 'Auth::registerVerify/$1');
+$routes->get('auth/complete-registration', 'Auth::completeRegistration');
+$routes->post('auth/complete-registration', 'Auth::completeRegistration');
+// Auth Paiment
 $routes->post('auth/payment', 'Auth::payment');
+// Auth Login
 $routes->get('auth/login', 'Auth::login');
-$routes->post('auth/login_post', 'Auth::login_post');
-$routes->get('auth/request_password_reset', 'Auth::request_password_reset');
-$routes->post('auth/send_password_reset_email', 'Auth::send_password_reset_email');
-$routes->get('auth/reset_password/(:any)', 'Auth::reset_password/$1');
-$routes->post('auth/reset_password_post', 'Auth::reset_password_post');
-$routes->get('auth/verify/(:any)', 'Auth::verify/$1');
-$routes->get('auth/complete-registration-post', 'Auth::complete_registration_post');
-$routes->post('auth/complete-registration-post', 'Auth::complete_registration_post');
+$routes->post('auth/login', 'Auth::login');
+// Auth Password Reset
+$routes->get('auth/password-reset', 'Auth::requestPasswordReset');
+$routes->post('auth/password-reset', 'Auth::requestPasswordReset');
+$routes->get('auth/password-verify/(:any)', 'Auth::passwordVerify/$1');
+$routes->post('auth/password-verify', 'Auth::passwordVerifyPost');
+// Welcome page
+$routes->get('welcome', 'Auth::welcome');
