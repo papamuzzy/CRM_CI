@@ -51,7 +51,7 @@ class UserClientPrivateModel extends Model {
     /**
      * @throws \ReflectionException
      */
-    public function createUser(string $email): bool|int|string {
+    public function createUser(string $email): array|object|null {
         do {
             $verification_code = md5(rand());
             $res = $this->where('verification_code', $verification_code)->first();
@@ -67,7 +67,7 @@ class UserClientPrivateModel extends Model {
             'verification_code_expires' => strtotime('+1 hour'), // Срок действия 1 час
             'verifies_last'             => time(),
             'verifies_count'            => 1,
-            'verified'                  => 0,
+            'verified'                  => false,
             'token'                     => $token,
             'token_expires'             => strtotime('+2 hour'), // Срок действия 2 часа
             'status'                    => 2,
@@ -102,6 +102,19 @@ class UserClientPrivateModel extends Model {
             'verification_code_expires' => strtotime('+1 hour'), // Срок действия 1 час
             'verifies_last'             => time(),
             'verifies_count'            => $verifies_count,
+            'token_expires'             => strtotime('+2 hour'), // Срок действия 2 часа
+        ];
+
+        $this->update($user_id, $data);
+
+        return $this->find($user_id);
+    }
+
+    /**
+     * @throws \ReflectionException
+     */
+    public function updateToken(int $user_id): array|object|null {
+        $data = [
             'token_expires'             => strtotime('+2 hour'), // Срок действия 2 часа
         ];
 

@@ -7,7 +7,10 @@ use CodeIgniter\HTTP\ResponseInterface;
 use Psr\Log\LoggerInterface;
 
 class Auth extends BaseController {
-    private $user;
+    private ?string $error = null;
+    private array $userData = [];
+    private array $userPrivateData = [];
+    private int $userId = 0;
 
     /**
      * @var \App\Models\UserClientModel
@@ -25,6 +28,7 @@ class Auth extends BaseController {
      * @param \Psr\Log\LoggerInterface            $logger
      *
      * @return void
+     * @throws \ReflectionException
      */
     public function initController(RequestInterface $request, ResponseInterface $response, LoggerInterface $logger): void {
         // Do Not Edit This Line
@@ -35,7 +39,83 @@ class Auth extends BaseController {
 
         helper(['form']);
 
-        $this->user = new UserClient();
+        $this->checkSession();
+    }
+
+    /**
+     * @throws \ReflectionException
+     */
+    private function checkSession(): void {
+        $this->error = null;
+        $user_id = $this->session->get('user_id');
+        if ($user_id === null) {
+            $this->error = 'Session empty.';
+            return;
+        }
+
+        $this->loadUser($user_id);
+
+        $token = get_cookie('token');
+        if ($token === null) {
+            $this->error = 'Token empty.';
+            return;
+        }
+
+        if ($token !== $this->session->get('token')) {
+            $this->error = 'Session token invalid.';
+            return;
+        }
+
+        if (time() > $this->userPrivateData['token_expires']) {
+            $this->error = 'Session token expired.';
+            return;
+        }
+
+        $this->userPrivateModel->updateToken($user_id);
+        $this->loadUser($user_id);
+        $this->refreshSession();
+    }
+
+    private function refreshSession(): void {
+        $cookie = new Cookie(
+            'token',
+            $this->userPrivateData['token'],
+            [
+                'expires'  => new DateTime('+2 hours'),
+                'samesite' => Cookie::SAMESITE_LAX,
+            ]
+        );
+        set_cookie($cookie);
+
+        $session_data = [
+            'token' => $this->userPrivateData['token'],
+        ];
+        $this->session->set($session_data);
+    }
+
+    private function createSession(): void {
+        $cookie = new Cookie(
+            'token',
+            $this->userPrivateData['token'],
+            [
+                'expires'  => new DateTime('+2 hours'),
+                'samesite' => Cookie::SAMESITE_LAX,
+            ]
+        );
+        set_cookie($cookie);
+
+        $session_data = [
+            'user_id'    => $this->userId,
+            'token'      => $this->userPrivateData['token'],
+            'user_group' => 'client',
+        ];
+        $this->session->set($session_data);
+    }
+
+    private function loadUser(int $user_id): void {
+        $this->userId = $user_id;
+        $this->userPrivateData = $this->userPrivateModel->find($user_id);
+        $this->userData = $this->userModel->find($user_id);
     }
 
     /**
@@ -140,24 +220,10 @@ class Auth extends BaseController {
                 $this->userModel->save($data);
 
                 if ($this->_send_verification_email($get_form_post['email'], $user['verification_code']) === true) {
-                    $cookie = new Cookie(
-                        'token',
-                        $user['token'],
-                        [
-                            'expires'  => new DateTime('+2 hours'),
-                            'samesite' => Cookie::SAMESITE_LAX,
-                        ]
-                    );
-                    set_cookie($cookie);
+                    $this->loadUser($user['id']);
+                    $this->createSession();
 
-                    $session_data = [
-                        'user_id'     => $user['id'],
-                        'token'       => $user['token'],
-                        'user_group'  => 'client',
-                        'success_msg' => 'Check your email for a verification link',
-                    ];
-                    $this->session->markAsFlashdata('success_msg');
-                    $this->session->set($session_data);
+                    $this->session->setFlashdata('success_msg', 'Check your email for a verification link');
                     return redirect()->to('auth/register-success');
                 } else {
                     $data_page['error'] = 'Something strange happened, try again in a few minutes.';
@@ -204,26 +270,24 @@ class Auth extends BaseController {
             'description' => lang('Loginauth.descriptionLoginCreate') . " - " . lang('Loginauth.defSignTitle'),
         ];
 
-        $user_id = $this->user->getId();
-        $error = $this->user->getError();
-        if (empty($user_id) || !empty($error)) {
+        if (empty($this->userId) || !empty($this->error)) {
             $session_data = [
-                'register_error' => $error,
+                'register_error' => $this->error,
             ];
             $this->session->markAsFlashdata('register_error');
             $this->session->set($session_data);
             return redirect()->to('auth/register');
         }
 
-        $user = $this->userPrivateModel->find($user_id);
-        $user = array_merge($user, $this->userModel->find($user_id));
+        $user = $this->userPrivateModel->where('verification_code', $verification_code)->first();
+        $user = array_merge($user, $this->userModel->find($user['id']));
 
         if ($user) {
-            $current_time = date('Y-m-d H:i:s');
-            if ($current_time < $user['token_expires']) {
+            if (time() < $user['verification_code_expires']) {
                 $data_page['form_anchor'] = base_url('auth/complete-registration');
 
-                $this->userPrivateModel->update($user['id'], ['verified' => 1]);
+                $data_page['session'] = var_export($this->session->get(), true) . PHP_EOL . '$this->userId = ' . var_export($this->userId, true) . PHP_EOL . '$this->error = ' . var_export($this->error, true);
+                //$this->userPrivateModel->update($user['id'], ['verified' => true]);
                 $data_page['form_data'] = [
                     'first_name' => $user['first_name'],
                     'last_name'  => $user['last_name'],
@@ -258,13 +322,11 @@ class Auth extends BaseController {
 
         $user_id = $this->request->getPost('user_id');
 
-        $template = "create_account";
-
         $validation = \Config\Services::validation();
 
-        $user = $this->userModel->where('id', $user_id)->first();
+        $user = $this->userPrivateModel->find($user_id);
 
-        if ($user && strtotime($user['token_expires']) > time()) {
+        if ($user && $user['token_expires'] > time()) {
             $rules = [
                 'website_url'               => [
                     'label'  => 'Website',
@@ -377,11 +439,10 @@ class Auth extends BaseController {
                     'phone'                     => !empty($get_form_post['phone']) ? $get_form_post['phone'] : null,
                 ]);
                 $this->userPrivateModel->update($user['id'], [
-                    'password'      => password_hash($get_form_post['password'], PASSWORD_BCRYPT),
-                    'verified'      => 1,
-                    'token'         => null,
-                    'token_type'    => null,
-                    'token_expires' => null,
+                    'password'          => password_hash($get_form_post['password'], PASSWORD_BCRYPT),
+                    'verified'          => true,
+                    'verification_code' => null,
+                    'verifies_count'    => 0,
                 ]);
 
                 return redirect()->to('welcome');
@@ -453,29 +514,19 @@ class Auth extends BaseController {
         $user = $this->userPrivateModel->where('email', $email)->first();
 
         if ($user && password_verify($password, $user['password']) && $user['verified']) {
-            // ToDo add session and cookie
-            $cookie = new Cookie(
-                'token',
-                $user['token'],
-                [
-                    'expires'  => new DateTime('+2 hours'),
-                    'samesite' => Cookie::SAMESITE_LAX,
-                ]
-            );
-            set_cookie($cookie);
-
-            $session_data = [
-                'user_id'    => $user['id'],
-                'token'      => $user['token'],
-                'user_group' => 'client',
-            ];
-            $this->session->set($session_data);
+            $this->loadUser($user['id']);
+            $this->createSession();
             return redirect()->to('welcome');
         } else {
             $data_page['error'] = 'Invalid credentials or email not verified.';
             $data_page['form_data'] = $get_form_post;
             return view('loginauth/templates/login_auth', $data_page);
         }
+    }
+
+    public function logout(): \CodeIgniter\HTTP\RedirectResponse {
+        $this->session->destroy();
+        return redirect()->to('/');
     }
 
     public function requestPasswordReset(): \CodeIgniter\HTTP\RedirectResponse|string {
@@ -544,22 +595,8 @@ class Auth extends BaseController {
             $emailService->setMessage($message);
 
             if ($emailService->send()) {
-                $cookie = new Cookie(
-                    'token',
-                    $user['token'],
-                    [
-                        'expires'  => new DateTime('+2 hours'),
-                        'samesite' => Cookie::SAMESITE_LAX,
-                    ]
-                );
-                set_cookie($cookie);
-
-                $session_data = [
-                    'user_id'    => $user['id'],
-                    'token'      => $user['token'],
-                    'user_group' => 'client',
-                ];
-                $this->session->set($session_data);
+                $this->loadUser($user['id']);
+                $this->createSession();
 
                 return view('check_email');
             } else {
@@ -580,9 +617,11 @@ class Auth extends BaseController {
     public function passwordVerify($verification_code): \CodeIgniter\HTTP\RedirectResponse|string {
         // TODO: Та сама ситуація, лінк з токеном доступний на інший пристроях та браузерах, потрібно переробити логіку привʼязки токену суто для конкретного юзера. Емейл не потрібно виводити але поле нехай буде, нехай юзер вводить свій емейл, для того щоб підтвердити.
         // TODO: Потрібна валідація токену
+        // ToDo токен використовується один раз при перевірці $user['verification_code'] == $verification_code, ні в запитах,
+        // ні деінде ще не використовується, навіщо його додатково валідувати?
 
-        $user_id = $this->user->getId();
-        $error = $this->user->getError();
+        $user_id = $this->userId;
+        $error = $this->error;
         if (empty($user_id) || !empty($error)) {
             $session_data = [
                 'register_error' => $error,
@@ -619,11 +658,11 @@ class Auth extends BaseController {
         $data_page = [
             'title'       => lang('Loginauth.titleLoginResetPass') . " - " . lang('Loginauth.defSignTitle'),
             'description' => lang('Loginauth.descriptionLoginResetPass') . " - " . lang('Loginauth.defSignTitle'),
-            'form_anchor' => base_url('auth/send_password_reset_email'),
+            'form_anchor' => base_url('auth/password-verify'),
         ];
 
-        $user_id = $this->user->getId();
-        $error = $this->user->getError();
+        $user_id = $this->userId;
+        $error = $this->error;
         if (empty($user_id) || !empty($error)) {
             $session_data = [
                 'register_error' => $error,
@@ -645,7 +684,7 @@ class Auth extends BaseController {
                     'max_length'  => 'Email cannot exceed 250 characters',
                 ],
             ],
-            'password'         => [
+            'new_password'         => [
                 'rules'  => 'required|min_length[8]|max_length[15]',
                 'errors' => [
                     'required'   => 'Password is required',
@@ -654,7 +693,7 @@ class Auth extends BaseController {
                 ],
             ],
             'confirm_password' => [
-                'rules'  => 'required|min_length[8]|max_length[15]|matches[password]',
+                'rules'  => 'required|min_length[8]|max_length[15]|matches[new_password]',
                 'errors' => [
                     'required'   => 'Confirm Password is required',
                     'min_length' => 'Confirm Password must be at least 8 characters long',
@@ -679,7 +718,6 @@ class Auth extends BaseController {
                 $this->userPrivateModel->update($user['id'], [
                     'password'                  => password_hash($get_form_post['new_password'], PASSWORD_BCRYPT),
                     'verification_code'         => null,
-                    'verification_code_expires' => null,
                     'verifies_count'            => 0,
                 ]);
 

@@ -19,6 +19,8 @@ $routes->post('auth/payment', 'Auth::payment');
 // Auth Login
 $routes->get('auth/login', 'Auth::login');
 $routes->post('auth/login', 'Auth::login');
+// Auth Logout
+$routes->get('auth/logout', 'Auth::logout');
 // Auth Password Reset
 $routes->get('auth/password-reset', 'Auth::requestPasswordReset');
 $routes->post('auth/password-reset', 'Auth::requestPasswordReset');
