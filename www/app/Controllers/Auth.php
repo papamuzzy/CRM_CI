@@ -6,22 +6,7 @@ use CodeIgniter\HTTP\RequestInterface;
 use CodeIgniter\HTTP\ResponseInterface;
 use Psr\Log\LoggerInterface;
 
-class Auth extends BaseController {
-    private ?string $error = null;
-    private array $userData = [];
-    private array $userPrivateData = [];
-    private int $userId = 0;
-
-    /**
-     * @var \App\Models\UserClientModel
-     */
-    private $userModel;
-
-    /**
-     * @var \App\Models\UserClientPrivateModel
-     */
-    private $userPrivateModel;
-
+class Auth extends UserBaseController {
     /**
      * @param \CodeIgniter\HTTP\RequestInterface  $request
      * @param \CodeIgniter\HTTP\ResponseInterface $response
@@ -34,88 +19,7 @@ class Auth extends BaseController {
         // Do Not Edit This Line
         parent::initController($request, $response, $logger);
 
-        $this->userModel = model('UserClientModel');
-        $this->userPrivateModel = model('UserClientPrivateModel');
-
         helper(['form']);
-
-        $this->checkSession();
-    }
-
-    /**
-     * @throws \ReflectionException
-     */
-    private function checkSession(): void {
-        $this->error = null;
-        $user_id = $this->session->get('user_id');
-        if ($user_id === null) {
-            $this->error = 'Session empty.';
-            return;
-        }
-
-        $this->loadUser($user_id);
-
-        $token = get_cookie('token');
-        if ($token === null) {
-            $this->error = 'Token empty.';
-            return;
-        }
-
-        if ($token !== $this->session->get('token')) {
-            $this->error = 'Session token invalid.';
-            return;
-        }
-
-        if (time() > $this->userPrivateData['token_expires']) {
-            $this->error = 'Session token expired.';
-            return;
-        }
-
-        $this->userPrivateModel->updateToken($user_id);
-        $this->loadUser($user_id);
-        $this->refreshSession();
-    }
-
-    private function refreshSession(): void {
-        $cookie = new Cookie(
-            'token',
-            $this->userPrivateData['token'],
-            [
-                'expires'  => new DateTime('+2 hours'),
-                'samesite' => Cookie::SAMESITE_LAX,
-            ]
-        );
-        set_cookie($cookie);
-
-        $session_data = [
-            'token' => $this->userPrivateData['token'],
-        ];
-        $this->session->set($session_data);
-    }
-
-    private function createSession(): void {
-        $cookie = new Cookie(
-            'token',
-            $this->userPrivateData['token'],
-            [
-                'expires'  => new DateTime('+2 hours'),
-                'samesite' => Cookie::SAMESITE_LAX,
-            ]
-        );
-        set_cookie($cookie);
-
-        $session_data = [
-            'user_id'    => $this->userId,
-            'token'      => $this->userPrivateData['token'],
-            'user_group' => 'client',
-        ];
-        $this->session->set($session_data);
-    }
-
-    private function loadUser(int $user_id): void {
-        $this->userId = $user_id;
-        $this->userPrivateData = $this->userPrivateModel->find($user_id);
-        $this->userData = $this->userModel->find($user_id);
     }
 
     /**
@@ -270,7 +174,7 @@ class Auth extends BaseController {
             'description' => lang('Loginauth.descriptionLoginCreate') . " - " . lang('Loginauth.defSignTitle'),
         ];
 
-        if (empty($this->userId) || !empty($this->error)) {
+        if (!$this->isUserValid()) {
             $session_data = [
                 'register_error' => $this->error,
             ];
@@ -279,10 +183,9 @@ class Auth extends BaseController {
             return redirect()->to('auth/register');
         }
 
-        $user = $this->userPrivateModel->where('verification_code', $verification_code)->first();
-        $user = array_merge($user, $this->userModel->find($user['id']));
+        $user = $this->getUserFullData();
 
-        if ($user) {
+        if ($user['verification_code'] === $verification_code) {
             if (time() < $user['verification_code_expires']) {
                 $data_page['form_anchor'] = base_url('auth/complete-registration');
 
@@ -320,11 +223,18 @@ class Auth extends BaseController {
             'form_anchor' => base_url('auth/complete-registration'),
         ];
 
-        $user_id = $this->request->getPost('user_id');
+        if (!$this->isUserValid()) {
+            $session_data = [
+                'register_error' => $this->error,
+            ];
+            $this->session->markAsFlashdata('register_error');
+            $this->session->set($session_data);
+            return redirect()->to('auth/register');
+        }
 
         $validation = \Config\Services::validation();
 
-        $user = $this->userPrivateModel->find($user_id);
+        $user = $this->userPrivateData;
 
         if ($user && $user['token_expires'] > time()) {
             $rules = [
@@ -543,6 +453,7 @@ class Auth extends BaseController {
         if ($error !== null) {
             $data_page['error'] = $error;
         }
+
         if (!$this->request->is('post')) {
             return view('loginauth/templates/forgot_password', $data_page);
         }
@@ -620,11 +531,9 @@ class Auth extends BaseController {
         // ToDo токен використовується один раз при перевірці $user['verification_code'] == $verification_code, ні в запитах,
         // ні деінде ще не використовується, навіщо його додатково валідувати?
 
-        $user_id = $this->userId;
-        $error = $this->error;
-        if (empty($user_id) || !empty($error)) {
+        if (!$this->isUserValid()) {
             $session_data = [
-                'register_error' => $error,
+                'register_error' => $this->sessionError,
             ];
             $this->session->markAsFlashdata('register_error');
             $this->session->set($session_data);
@@ -637,9 +546,9 @@ class Auth extends BaseController {
             'form_anchor' => base_url('auth/password-verify'),
         ];
 
-        $user = $this->userPrivateModel->find($user_id);
+        $user = $this->userPrivateData;
 
-        if ($user && time() < $user['verification_code_expires'] && $user['verification_code'] == $verification_code) {
+        if ($user && time() < $user['verification_code_expires'] && $user['verification_code'] === $verification_code) {
             return view('loginauth/templates/reset_password', $data_page);
         } else {
             $session_data = [
@@ -661,11 +570,9 @@ class Auth extends BaseController {
             'form_anchor' => base_url('auth/password-verify'),
         ];
 
-        $user_id = $this->userId;
-        $error = $this->error;
-        if (empty($user_id) || !empty($error)) {
+        if (!$this->isUserValid()) {
             $session_data = [
-                'register_error' => $error,
+                'register_error' => $this->sessionError,
             ];
             $this->session->markAsFlashdata('register_error');
             $this->session->set($session_data);
@@ -684,7 +591,7 @@ class Auth extends BaseController {
                     'max_length'  => 'Email cannot exceed 250 characters',
                 ],
             ],
-            'new_password'         => [
+            'new_password'     => [
                 'rules'  => 'required|min_length[8]|max_length[15]',
                 'errors' => [
                     'required'   => 'Password is required',
@@ -711,14 +618,14 @@ class Auth extends BaseController {
             return view('loginauth/templates/reset_password', $data_page);
         }
 
-        $user = $this->userPrivateModel->find($user_id);
+        $user = $this->userPrivateData;
 
         if ($user) {
             if ($get_form_post['new_password'] === $get_form_post['confirm_password']) {
                 $this->userPrivateModel->update($user['id'], [
-                    'password'                  => password_hash($get_form_post['new_password'], PASSWORD_BCRYPT),
-                    'verification_code'         => null,
-                    'verifies_count'            => 0,
+                    'password'          => password_hash($get_form_post['new_password'], PASSWORD_BCRYPT),
+                    'verification_code' => null,
+                    'verifies_count'    => 0,
                 ]);
 
                 return view('welcome');
