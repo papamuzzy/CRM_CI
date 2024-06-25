@@ -42,11 +42,7 @@ abstract class UserBaseController extends Controller {
      * The creation of dynamic property is deprecated in PHP 8.2.
      */
     protected \CodeIgniter\Session\Session $session;
-
-    protected ?string $sessionError = null;
-    protected array $userData = [];
-    protected array $userPrivateData = [];
-    protected int $userId = 0;
+    protected $user;
 
     /**
      * @var \App\Models\UserClientModel
@@ -73,94 +69,9 @@ abstract class UserBaseController extends Controller {
         // Preload any models, libraries, etc, here.
 
         $this->session = \Config\Services::session();
+        $this->user = \Config\Services::user();
 
         $this->userModel = model('UserClientModel');
         $this->userPrivateModel = model('UserClientPrivateModel');
-
-        $this->checkSession();
-    }
-
-    /**
-     * @throws \ReflectionException
-     */
-    protected function checkSession(): void {
-        $this->sessionError = null;
-        $user_id = $this->session->get('user_id');
-        if ($user_id === null) {
-            $this->sessionError = 'Session empty.';
-            return;
-        }
-
-        $this->loadUser($user_id);
-
-        $token = get_cookie('token');
-        if ($token === null) {
-            $this->sessionError = 'Token empty.';
-            return;
-        }
-
-        if ($token !== $this->session->get('token')) {
-            $this->sessionError = 'Session token invalid.';
-            return;
-        }
-
-        if (time() > $this->userPrivateData['token_expires']) {
-            $this->sessionError = 'Session token expired.';
-            return;
-        }
-
-        $this->userPrivateModel->updateToken($user_id);
-        $this->loadUser($user_id);
-        $this->refreshSession();
-    }
-
-    protected function refreshSession(): void {
-        $cookie = new Cookie(
-            'token',
-            $this->userPrivateData['token'],
-            [
-                'expires'  => new DateTime('+2 hours'),
-                'samesite' => Cookie::SAMESITE_LAX,
-            ]
-        );
-        set_cookie($cookie);
-
-        $session_data = [
-            'token' => $this->userPrivateData['token'],
-        ];
-        $this->session->set($session_data);
-    }
-
-    protected function createSession(): void {
-        $cookie = new Cookie(
-            'token',
-            $this->userPrivateData['token'],
-            [
-                'expires'  => new DateTime('+2 hours'),
-                'samesite' => Cookie::SAMESITE_LAX,
-            ]
-        );
-        set_cookie($cookie);
-
-        $session_data = [
-            'user_id'    => $this->userId,
-            'token'      => $this->userPrivateData['token'],
-            'user_group' => 'client',
-        ];
-        $this->session->set($session_data);
-    }
-
-    protected function loadUser(int $user_id): void {
-        $this->userId = $user_id;
-        $this->userPrivateData = $this->userPrivateModel->find($user_id);
-        $this->userData = $this->userModel->find($user_id);
-    }
-
-    protected function isUserValid(): bool {
-        return !empty($this->userId) && empty($this->sessionError);
-    }
-
-    protected function getUserFullData(): array {
-        return array_merge($this->userData, $this->userPrivateData);
     }
 }

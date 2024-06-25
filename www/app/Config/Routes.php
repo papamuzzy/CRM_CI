@@ -28,3 +28,9 @@ $routes->get('auth/password-verify/(:any)', 'Auth::passwordVerify/$1');
 $routes->post('auth/password-verify', 'Auth::passwordVerifyPost');
 // Welcome page
 $routes->get('welcome', 'Auth::welcome');
+
+// Test
+$routes->get('auth/test/login', 'Auth::testLogin');
+$routes->post('auth/test/login', 'Auth::testLogin');
+$routes->get('auth/test/logout', 'Auth::testLogout');
+$routes->post('auth/test/logout', 'Auth::testLogout');

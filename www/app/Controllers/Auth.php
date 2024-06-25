@@ -40,18 +40,15 @@ class Auth extends UserBaseController {
             return view('loginauth/templates/register_account', $data_page);
         }
 
-        $validation = \Config\Services::validation();
-        $validation->setRuleGroup('register');
-
         $get_form_post = $this->request->getPost(null, FILTER_SANITIZE_FULL_SPECIAL_CHARS);
-        if (!$this->validateData($get_form_post)) {
+        if (!$this->validateData($get_form_post, 'register')) {
             // Если валидация не прошла, возвращаемся к форме с ошибками
-            $data_page['validation'] = $validation->getErrors();
+            $data_page['validation'] = $this->validator->getErrors();
             $data_page['form_data'] = $get_form_post;
 
             return view('loginauth/templates/register_account', $data_page);
         } else {
-            $get_form_post = $validation->getValidated();
+            $get_form_post = $this->validator->getValidated();
 
             if (empty($get_form_post) or !is_array($get_form_post)) {
                 $data_page['error'] = 'Data not found, try again.';
@@ -82,13 +79,12 @@ class Auth extends UserBaseController {
                 ];
 
                 $this->userModel->save($data);
+                $this->user->load($user['id']);
+                //$this->user->createSession();
 
                 if ($this->_send_verification_email($get_form_post['email'], $user['verification_code']) === true) {
-                    $this->loadUser($user['id']);
-                    $this->createSession();
-
                     $this->session->setFlashdata('success_msg', 'Check your email for a verification link');
-                    return redirect()->to('auth/register-success');
+                    return redirect()->to('auth/register-success')->withCookies();
                 } else {
                     $data_page['error'] = 'Something strange happened, try again in a few minutes.';
                 }
@@ -134,23 +130,32 @@ class Auth extends UserBaseController {
             'description' => lang('Loginauth.descriptionLoginCreate') . " - " . lang('Loginauth.defSignTitle'),
         ];
 
-        if (!$this->isUserValid()) {
+        if (!$this->user->isValid()) {
             $session_data = [
-                'register_error' => $this->error,
+                'register_error' => ((!empty($this->user->getError())) ? $this->user->getError() : 'User Error empty, user Id = ' . $this->user->getId()),
             ];
             $this->session->markAsFlashdata('register_error');
             $this->session->set($session_data);
-            return redirect()->to('auth/register');
+            return redirect()->to('auth/register')->withCookies();
         }
 
-        $user = $this->getUserFullData();
+        /*$data = [
+            'data' => [
+                'userId' => $this->user->getId(),
+                'userError' => $this->user->getError(),
+                'user' => $this->user->getFullData(),
+                'verification_code' => $verification_code,
+                '_COOKIE' => $_COOKIE,
+            ],
+        ];
+        return view('test/test_data', $data);*/
+
+        $user = $this->user->getFullData();
 
         if ($user['verification_code'] === $verification_code) {
             if (time() < $user['verification_code_expires']) {
                 $data_page['form_anchor'] = base_url('auth/complete-registration');
 
-                $data_page['session'] = var_export($this->session->get(), true) . PHP_EOL . '$this->userId = ' . var_export($this->userId, true) . PHP_EOL . '$this->error = ' . var_export($this->error, true);
-                //$this->userPrivateModel->update($user['id'], ['verified' => true]);
                 $data_page['form_data'] = [
                     'first_name' => $user['first_name'],
                     'last_name'  => $user['last_name'],
@@ -164,7 +169,7 @@ class Auth extends UserBaseController {
                 ];
                 $this->session->markAsFlashdata('register_error');
                 $this->session->set($session_data);
-                return redirect()->to('auth/register');
+                return redirect()->to('auth/register')->withCookies();
             }
         } else {
             $session_data = [
@@ -172,7 +177,7 @@ class Auth extends UserBaseController {
             ];
             $this->session->markAsFlashdata('register_error');
             $this->session->set($session_data);
-            return redirect()->to('auth/register');
+            return redirect()->to('auth/register')->withCookies();
         }
     }
 
@@ -183,32 +188,29 @@ class Auth extends UserBaseController {
             'form_anchor' => base_url('auth/complete-registration'),
         ];
 
-        if (!$this->isUserValid()) {
+        if (!$this->user->isValid()) {
             $session_data = [
-                'register_error' => $this->error,
+                'register_error' => ((!empty($this->user->getError())) ? $this->user->getError() : 'User Error empty, user Id = ' . $this->user->getId()),
             ];
             $this->session->markAsFlashdata('register_error');
             $this->session->set($session_data);
-            return redirect()->to('auth/register');
+            return redirect()->to('auth/register')->withCookies();
         }
 
-        $validation = \Config\Services::validation();
-        $validation->setRuleGroup('register2');
-
-        $user = $this->userPrivateData;
+        $user = $this->user->getFullData();
 
         if ($user && $user['token_expires'] > time()) {
             $get_form_post = $this->request->getPost(null, FILTER_SANITIZE_FULL_SPECIAL_CHARS);
 
-            if (!$this->validateData($get_form_post)) {
-                $data_page['validation'] = $validation->getErrors();
+            if (!$this->validateData($get_form_post, 'register2')) {
+                $data_page['validation'] = $this->validator->getErrors();
                 $data_page['form_data'] = $get_form_post;
 
                 return view('loginauth/templates/create_account', $data_page);
             } else {
                 $get_counties_worked = $get_work_type = false;
 
-                $get_form_post = $validation->getValidated();
+                $get_form_post = $this->validator->getValidated();
 
                 if (empty($get_form_post) or !is_array($get_form_post)) {
                     $data_page['error'] = 'Data not found, try again.';
@@ -279,14 +281,10 @@ class Auth extends UserBaseController {
         }
 
         // TODO: Потрібна валідація
-
-        $validation = \Config\Services::validation();
-        $validation->setRuleGroup('login');
-
         $get_form_post = $this->request->getPost(null, FILTER_SANITIZE_FULL_SPECIAL_CHARS);
 
-        if (!$this->validateData($get_form_post)) {
-            $data_page['validation'] = $validation->getErrors();
+        if (!$this->validateData($get_form_post, 'login')) {
+            $data_page['validation'] = $this->validator->getErrors();
             $data_page['form_data'] = $get_form_post;
 
             return view('loginauth/templates/login_auth', $data_page);
@@ -298,8 +296,8 @@ class Auth extends UserBaseController {
         $user = $this->userPrivateModel->where('email', $email)->first();
 
         if ($user && password_verify($password, $user['password']) && $user['verified']) {
-            $this->loadUser($user['id']);
-            $this->createSession();
+            $this->user->load($user['id']);
+            //$this->user->createSession();
             return redirect()->to('welcome');
         } else {
             $data_page['error'] = 'Invalid credentials or email not verified.';
@@ -309,8 +307,8 @@ class Auth extends UserBaseController {
     }
 
     public function logout(): \CodeIgniter\HTTP\RedirectResponse {
-        $this->session->destroy();
-        return redirect()->to('/');
+        $this->user->logout();
+        return redirect()->to('/')->withCookies();
     }
 
     public function requestPasswordReset(): \CodeIgniter\HTTP\RedirectResponse|string {
@@ -332,14 +330,11 @@ class Auth extends UserBaseController {
             return view('loginauth/templates/forgot_password', $data_page);
         }
 
-        $validation = \Config\Services::validation();
-        $validation->setRuleGroup('password_reset');
-
         $get_form_post = $this->request->getPost(null, FILTER_SANITIZE_FULL_SPECIAL_CHARS);
         $data_page['form_data'] = $get_form_post;
 
-        if (!$this->validateData($get_form_post)) {
-            $data_page['validation'] = $validation->getErrors();
+        if (!$this->validateData($get_form_post, 'password_reset')) {
+            $data_page['validation'] = $this->validator->getErrors();
 
             return view('loginauth/templates/forgot_password', $data_page);
         }
@@ -370,10 +365,10 @@ class Auth extends UserBaseController {
             $emailService->setSubject(lang('Loginauth.messageResetPasswordAccountSubject'));
             $emailService->setMessage($message);
 
-            if ($emailService->send()) {
-                $this->loadUser($user['id']);
-                $this->createSession();
+            $this->user->load($user['id']);
+            //$this->user->createSession();
 
+            if ($emailService->send()) {
                 return view('check_email');
             } else {
                 $data_page['error'] = 'Something strange happened, try again in a few minutes.';
@@ -396,13 +391,13 @@ class Auth extends UserBaseController {
         // ToDo токен використовується один раз при перевірці $user['verification_code'] == $verification_code, ні в запитах,
         // ні деінде ще не використовується, навіщо його додатково валідувати?
 
-        if (!$this->isUserValid()) {
+        if (!$this->user->isValid()) {
             $session_data = [
-                'register_error' => $this->sessionError,
+                'register_error' => ((!empty($this->user->getError())) ? $this->user->getError() : 'User Error empty, user Id = ' . $this->user->getId()),
             ];
             $this->session->markAsFlashdata('register_error');
             $this->session->set($session_data);
-            return redirect()->to('auth/password-reset');
+            return redirect()->to('auth/password-reset')->withCookies();
         }
 
         $data_page = [
@@ -411,7 +406,7 @@ class Auth extends UserBaseController {
             'form_anchor' => base_url('auth/password-verify'),
         ];
 
-        $user = $this->userPrivateData;
+        $user = $this->user->getFullData();
 
         if ($user && time() < $user['verification_code_expires'] && $user['verification_code'] === $verification_code) {
             return view('loginauth/templates/reset_password', $data_page);
@@ -421,7 +416,7 @@ class Auth extends UserBaseController {
             ];
             $this->session->markAsFlashdata('register_error');
             $this->session->set($session_data);
-            return redirect()->to('auth/auth/password-reset');
+            return redirect()->to('auth/auth/password-reset')->withCookies();
         }
     }
 
@@ -435,29 +430,26 @@ class Auth extends UserBaseController {
             'form_anchor' => base_url('auth/password-verify'),
         ];
 
-        if (!$this->isUserValid()) {
+        if (!$this->user->isValid()) {
             $session_data = [
-                'register_error' => $this->sessionError,
+                'register_error' => ((!empty($this->user->getError())) ? $this->user->getError() : 'User Error empty, user Id = ' . $this->user->getId()),
             ];
             $this->session->markAsFlashdata('register_error');
             $this->session->set($session_data);
-            return redirect()->to('auth/password-reset');
+            return redirect()->to('auth/password-reset')->withCookies();
         }
 
         // TODO: Потрібна валідація
-        $validation = \Config\Services::validation();
-        $validation->setRuleGroup('password_reset2');
-
         $get_form_post = $this->request->getPost(null, FILTER_SANITIZE_FULL_SPECIAL_CHARS);
         $data_page['form_data'] = $get_form_post;
 
-        if (!$this->validateData($get_form_post)) {
-            $data_page['validation'] = $validation->getErrors();
+        if (!$this->validateData($get_form_post, 'password_reset2')) {
+            $data_page['validation'] = $this->validator->getErrors();
 
             return view('loginauth/templates/reset_password', $data_page);
         }
 
-        $user = $this->userPrivateData;
+        $user = $this->user->getFullData();
 
         if ($user) {
             if ($get_form_post['new_password'] === $get_form_post['confirm_password']) {
@@ -466,6 +458,8 @@ class Auth extends UserBaseController {
                     'verification_code' => null,
                     'verifies_count'    => 0,
                 ]);
+
+                $this->user->load($user['id']);
 
                 return view('welcome');
             } else {
@@ -478,8 +472,47 @@ class Auth extends UserBaseController {
             ];
             $this->session->markAsFlashdata('register_error');
             $this->session->set($session_data);
-            return redirect()->to('auth/auth/password-reset');
+            return redirect()->to('auth/auth/password-reset')->withCookies();
         }
+    }
+
+    public function testLogin() {
+        $data = [
+            'data'  => [
+                'userId'    => $this->user->getId(),
+                'userError' => $this->user->getError(),
+                'user'      => $this->user->getFullData(),
+                '_COOKIE'   => $_COOKIE,
+            ],
+            'links' => [
+                'LogOut' => base_url('auth/test/logout'),
+                'LogIn'  => base_url('auth/test/login'),
+            ],
+        ];
+
+        $this->userPrivateModel->updateToken(1);
+        $this->user->load(1);
+
+        return view('test/test_data', $data);
+    }
+
+    public function testLogout() {
+        $data = [
+            'data'  => [
+                'userId'    => $this->user->getId(),
+                'userError' => $this->user->getError(),
+                'user'      => $this->user->getFullData(),
+                '_COOKIE'   => $_COOKIE,
+            ],
+            'links' => [
+                'LogOut' => base_url('auth/test/logout'),
+                'LogIn'  => base_url('auth/test/login'),
+            ],
+        ];
+
+        $this->user->logout();
+
+        return view('test/test_data', $data);
     }
 }
 
