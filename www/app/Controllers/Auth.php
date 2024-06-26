@@ -46,12 +46,15 @@ class Auth extends UserBaseController {
             $data_page['validation'] = $this->validator->getErrors();
             $data_page['form_data'] = $get_form_post;
 
+            $this->user->addErrorToLog('Registration Validate error');
+
             return view('loginauth/templates/register_account', $data_page);
         } else {
             $get_form_post = $this->validator->getValidated();
 
             if (empty($get_form_post) or !is_array($get_form_post)) {
                 $data_page['error'] = 'Data not found, try again.';
+                $this->user->addErrorToLog('Registration Data not found');
 
                 return view('loginauth/templates/register_account', $data_page);
             }
@@ -59,6 +62,7 @@ class Auth extends UserBaseController {
             if (!$this->userPrivateModel->isUniqueEmail($get_form_post['email'])) {
                 $data_page['error'] = 'Email already exists';
                 $data_page['form_data'] = $get_form_post;
+                $this->user->addErrorToLog('Registration Email already exists');
 
                 return view('loginauth/templates/register_account', $data_page);
             }
@@ -72,24 +76,26 @@ class Auth extends UserBaseController {
 
             if (!empty($user['verification_code']) && $user['verifies_count'] < 4) {
                 $data = [
-                    'id'         => $user['id'],
-                    'company'    => $get_form_post['сompany_name'],
-                    'first_name' => $get_form_post['first_name'],
-                    'last_name'  => $get_form_post['last_name'],
+                    'id'           => $user['id'],
+                    'company_name' => $get_form_post['сompany_name'],
+                    'first_name'   => $get_form_post['first_name'],
+                    'last_name'    => $get_form_post['last_name'],
                 ];
 
                 $this->userModel->save($data);
                 $this->user->load($user['id']);
-                //$this->user->createSession();
 
                 if ($this->_send_verification_email($get_form_post['email'], $user['verification_code']) === true) {
                     $this->session->setFlashdata('success_msg', 'Check your email for a verification link');
+                    $this->user->addErrorToLog('Registration Step 1 Success');
                     return redirect()->to('auth/register-success')->withCookies();
                 } else {
                     $data_page['error'] = 'Something strange happened, try again in a few minutes.';
+                    $this->user->addErrorToLog('Registration Something strange happened');
                 }
             } else {
                 $data_page['error'] = 'You have exhausted your registration attempts. The next attempt is possible after 24 hours.';
+                $this->user->addErrorToLog('Registration Exhausted registration attempts');
             }
             return view('loginauth/templates/register_account', $data_page);
         }
@@ -134,21 +140,11 @@ class Auth extends UserBaseController {
             $session_data = [
                 'register_error' => ((!empty($this->user->getError())) ? $this->user->getError() : 'User Error empty, user Id = ' . $this->user->getId()),
             ];
-            $this->session->markAsFlashdata('register_error');
-            $this->session->set($session_data);
+            $this->session->setFlashdata($session_data);
+            $this->user->addErrorToLog('Registration Verify ' .
+                                       ((!empty($this->user->getError())) ? $this->user->getError() : 'User Error empty, user Id = ' . $this->user->getId()));
             return redirect()->to('auth/register')->withCookies();
         }
-
-        /*$data = [
-            'data' => [
-                'userId' => $this->user->getId(),
-                'userError' => $this->user->getError(),
-                'user' => $this->user->getFullData(),
-                'verification_code' => $verification_code,
-                '_COOKIE' => $_COOKIE,
-            ],
-        ];
-        return view('test/test_data', $data);*/
 
         $user = $this->user->getFullData();
 
@@ -160,23 +156,22 @@ class Auth extends UserBaseController {
                     'first_name' => $user['first_name'],
                     'last_name'  => $user['last_name'],
                     'email'      => $user['email'],
-                    'user_id'    => $user['id'],
                 ];
                 return view('loginauth/templates/create_account', $data_page);
             } else {
                 $session_data = [
                     'register_error' => 'Verification code has expired. Please register again.',
                 ];
-                $this->session->markAsFlashdata('register_error');
-                $this->session->set($session_data);
+                $this->session->setFlashdata($session_data);
+                $this->user->addErrorToLog('Registration Verify - Verification code has expired');
                 return redirect()->to('auth/register')->withCookies();
             }
         } else {
             $session_data = [
                 'register_error' => 'Invalid verification code',
             ];
-            $this->session->markAsFlashdata('register_error');
-            $this->session->set($session_data);
+            $this->session->setFlashdata($session_data);
+            $this->user->addErrorToLog('Registration Verify - Invalid verification code');
             return redirect()->to('auth/register')->withCookies();
         }
     }
@@ -192,8 +187,9 @@ class Auth extends UserBaseController {
             $session_data = [
                 'register_error' => ((!empty($this->user->getError())) ? $this->user->getError() : 'User Error empty, user Id = ' . $this->user->getId()),
             ];
-            $this->session->markAsFlashdata('register_error');
-            $this->session->set($session_data);
+            $this->session->setFlashdata($session_data);
+            $this->user->addErrorToLog('Registration Verify complete ' .
+                                       ((!empty($this->user->getError())) ? $this->user->getError() : 'User Error empty, user Id = ' . $this->user->getId()));
             return redirect()->to('auth/register')->withCookies();
         }
 
@@ -205,39 +201,29 @@ class Auth extends UserBaseController {
             if (!$this->validateData($get_form_post, 'register2')) {
                 $data_page['validation'] = $this->validator->getErrors();
                 $data_page['form_data'] = $get_form_post;
-
+                $this->user->addErrorToLog('Registration Verify complete Validation error');
                 return view('loginauth/templates/create_account', $data_page);
             } else {
-                $get_counties_worked = $get_work_type = false;
-
                 $get_form_post = $this->validator->getValidated();
 
                 if (empty($get_form_post) or !is_array($get_form_post)) {
                     $data_page['error'] = 'Data not found, try again.';
-
+                    $this->user->addErrorToLog('Registration Verify complete Data not found');
                     return view('loginauth/templates/create_account', $data_page);
                 }
 
                 if (!isUnique($this->userModel, 'phone', $this->request->getPost()['phone'])) {
                     $data_page['error'] = 'Phone number already exists';
                     $data_page['form_data'] = $this->request->getPost();
-
+                    $this->user->addErrorToLog('Registration Verify complete Phone number already exists');
                     return view('loginauth/templates/create_account', $data_page);
-                }
-
-                if (is_array($get_form_post['counties_worked'])) {
-                    $get_counties_worked = json_encode($get_form_post['counties_worked']);
-                }
-
-                if (is_array($get_form_post['work_type'])) {
-                    $get_work_type = json_encode($get_form_post['work_type']);
                 }
 
                 $this->userModel->update($user['id'], [
                     'website_url'               => !empty($get_form_post['website_url']) ? $get_form_post['website_url'] : null,
                     'company_address'           => !empty($get_form_post['company_address']) ? $get_form_post['company_address'] : null,
-                    'counties_worked'           => !empty($get_counties_worked) ? $get_counties_worked : null,
-                    'work_type'                 => !empty($get_work_type) ? $get_work_type : null,
+                    'counties_worked'           => !empty($get_form_post['counties_worked']) && is_array($get_form_post['counties_worked']) ? $get_form_post['counties_worked'] : [],
+                    'work_type'                 => !empty($get_form_post['work_type']) && is_array($get_form_post['work_type']) ? $get_form_post['work_type'] : [],
                     'how_did_you_hear_about_us' => !empty($get_form_post['how_did_you_hear_about_us']) ? $get_form_post['how_did_you_hear_about_us'] : null,
                     'phone'                     => !empty($get_form_post['phone']) ? $get_form_post['phone'] : null,
                 ]);
@@ -247,20 +233,31 @@ class Auth extends UserBaseController {
                     'verification_code' => null,
                     'verifies_count'    => 0,
                 ]);
+                $this->userPrivateModel->updateToken($user['id']);
 
-                return redirect()->to('welcome');
+                return redirect()->to('welcome')->withCookies();
             }
         } else {
             $session_data = [
                 'register_error' => 'Invalid or expired verification code.',
             ];
-            $this->session->markAsFlashdata('register_error');
-            $this->session->set($session_data);
-            return redirect()->to('auth/register');
+            $this->session->setFlashdata($session_data);
+            $this->user->addErrorToLog('Registration Verify complete Invalid or expired verification code');
+            return redirect()->to('auth/register')->withCookies();
         }
     }
 
-    public function welcome(): string {
+    public function welcome(): \CodeIgniter\HTTP\RedirectResponse|string {
+        if (!$this->user->isValid()) {
+            $session_data = [
+                'register_error' => ((!empty($this->user->getError())) ? $this->user->getError() : 'User Error empty, user Id = ' . $this->user->getId()),
+            ];
+            $this->session->setFlashdata($session_data);
+            $this->user->addErrorToLog('Registration Verify complete ' .
+                                       ((!empty($this->user->getError())) ? $this->user->getError() : 'User Error empty, user Id = ' . $this->user->getId()));
+            return redirect()->to('auth/register')->withCookies();
+        }
+
         return view('welcome');
     }
 
@@ -270,6 +267,10 @@ class Auth extends UserBaseController {
     }
 
     public function login(): \CodeIgniter\HTTP\RedirectResponse|string {
+        if ($this->user->isValid()) {
+            return redirect()->to('welcome')->withCookies();
+        }
+
         $data_page = [
             'title'       => lang('Loginauth.titleLoginAuth') . " - " . lang('Loginauth.defSignTitle'),
             'description' => lang('Loginauth.descriptionLoginAuth') . " - " . lang('Loginauth.defSignTitle'),
@@ -286,7 +287,7 @@ class Auth extends UserBaseController {
         if (!$this->validateData($get_form_post, 'login')) {
             $data_page['validation'] = $this->validator->getErrors();
             $data_page['form_data'] = $get_form_post;
-
+            $this->user->addErrorToLog('Login page Validation error');
             return view('loginauth/templates/login_auth', $data_page);
         }
 
@@ -296,14 +297,21 @@ class Auth extends UserBaseController {
         $user = $this->userPrivateModel->where('email', $email)->first();
 
         if ($user && password_verify($password, $user['password']) && $user['verified']) {
-            $this->user->load($user['id']);
-            //$this->user->createSession();
-            return redirect()->to('welcome');
+            if (!$this->userPrivateModel->isLogged($user['id'])) {
+                $this->userPrivateModel->updateToken($user['id']);
+                $this->user->load($user['id']);
+                $this->user->logIn();
+                return redirect()->to('welcome')->withCookies();
+            }
+
+            $data_page['error'] = 'You`re already logged in.';
+            $this->user->addErrorToLog('Login page You`re already logged in');
         } else {
             $data_page['error'] = 'Invalid credentials or email not verified.';
-            $data_page['form_data'] = $get_form_post;
-            return view('loginauth/templates/login_auth', $data_page);
+            $this->user->addErrorToLog('Login page Invalid credentials or email not verified');
         }
+        $data_page['form_data'] = $get_form_post;
+        return view('loginauth/templates/login_auth', $data_page);
     }
 
     public function logout(): \CodeIgniter\HTTP\RedirectResponse {
@@ -351,9 +359,14 @@ class Auth extends UserBaseController {
                 return view('loginauth/templates/forgot_password', $data_page);
             }
 
+            if ($this->userPrivateModel->updatePasswordResetCount($user['id']) > 3) {
+                $data_page['count_too_big'] = 'You have exhausted your password reset attempts. The next attempt is possible after 10 days.';
+                return view('loginauth/templates/forgot_password', $data_page);
+            }
+
             $user = $this->userPrivateModel->updateVerificationCode($user['id']);
             if (empty($user['verification_code']) && $user['verifies_count'] > 3) {
-                $data_page['count_too_big'] = 'You have exhausted your registration attempts. The next attempt is possible after 24 hours.';
+                $data_page['count_too_big'] = 'You have exhausted your verification attempts. The next attempt is possible after 24 hours.';
                 return view('loginauth/templates/forgot_password', $data_page);
             }
 
@@ -366,7 +379,6 @@ class Auth extends UserBaseController {
             $emailService->setMessage($message);
 
             $this->user->load($user['id']);
-            //$this->user->createSession();
 
             if ($emailService->send()) {
                 return view('check_email');
@@ -395,8 +407,7 @@ class Auth extends UserBaseController {
             $session_data = [
                 'register_error' => ((!empty($this->user->getError())) ? $this->user->getError() : 'User Error empty, user Id = ' . $this->user->getId()),
             ];
-            $this->session->markAsFlashdata('register_error');
-            $this->session->set($session_data);
+            $this->session->setFlashdata($session_data);
             return redirect()->to('auth/password-reset')->withCookies();
         }
 
@@ -414,8 +425,7 @@ class Auth extends UserBaseController {
             $session_data = [
                 'register_error' => 'Invalid or expired reset code.',
             ];
-            $this->session->markAsFlashdata('register_error');
-            $this->session->set($session_data);
+            $this->session->setFlashdata($session_data);
             return redirect()->to('auth/auth/password-reset')->withCookies();
         }
     }
@@ -434,8 +444,7 @@ class Auth extends UserBaseController {
             $session_data = [
                 'register_error' => ((!empty($this->user->getError())) ? $this->user->getError() : 'User Error empty, user Id = ' . $this->user->getId()),
             ];
-            $this->session->markAsFlashdata('register_error');
-            $this->session->set($session_data);
+            $this->session->setFlashdata($session_data);
             return redirect()->to('auth/password-reset')->withCookies();
         }
 
@@ -458,7 +467,7 @@ class Auth extends UserBaseController {
                     'verification_code' => null,
                     'verifies_count'    => 0,
                 ]);
-
+                $this->userPrivateModel->updateToken($user['id']);
                 $this->user->load($user['id']);
 
                 return view('welcome');
@@ -470,49 +479,9 @@ class Auth extends UserBaseController {
             $session_data = [
                 'register_error' => 'Invalid or expired reset code.',
             ];
-            $this->session->markAsFlashdata('register_error');
-            $this->session->set($session_data);
+            $this->session->setFlashdata($session_data);
             return redirect()->to('auth/auth/password-reset')->withCookies();
         }
-    }
-
-    public function testLogin() {
-        $data = [
-            'data'  => [
-                'userId'    => $this->user->getId(),
-                'userError' => $this->user->getError(),
-                'user'      => $this->user->getFullData(),
-                '_COOKIE'   => $_COOKIE,
-            ],
-            'links' => [
-                'LogOut' => base_url('auth/test/logout'),
-                'LogIn'  => base_url('auth/test/login'),
-            ],
-        ];
-
-        $this->userPrivateModel->updateToken(1);
-        $this->user->load(1);
-
-        return view('test/test_data', $data);
-    }
-
-    public function testLogout() {
-        $data = [
-            'data'  => [
-                'userId'    => $this->user->getId(),
-                'userError' => $this->user->getError(),
-                'user'      => $this->user->getFullData(),
-                '_COOKIE'   => $_COOKIE,
-            ],
-            'links' => [
-                'LogOut' => base_url('auth/test/logout'),
-                'LogIn'  => base_url('auth/test/login'),
-            ],
-        ];
-
-        $this->user->logout();
-
-        return view('test/test_data', $data);
     }
 }
 

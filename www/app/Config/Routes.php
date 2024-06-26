@@ -14,7 +14,7 @@ $routes->get('auth/register-success', 'Auth::registerSuccess');
 $routes->get('auth/register-verify/(:any)', 'Auth::registerVerify/$1');
 $routes->get('auth/complete-registration', 'Auth::completeRegistration');
 $routes->post('auth/complete-registration', 'Auth::completeRegistration');
-// Auth Paiment
+// Auth Payment
 $routes->post('auth/payment', 'Auth::payment');
 // Auth Login
 $routes->get('auth/login', 'Auth::login');
@@ -29,8 +29,6 @@ $routes->post('auth/password-verify', 'Auth::passwordVerifyPost');
 // Welcome page
 $routes->get('welcome', 'Auth::welcome');
 
-// Test
-$routes->get('auth/test/login', 'Auth::testLogin');
-$routes->post('auth/test/login', 'Auth::testLogin');
-$routes->get('auth/test/logout', 'Auth::testLogout');
-$routes->post('auth/test/logout', 'Auth::testLogout');
+// Account
+$routes->get('account', 'Account::index');
+$routes->post('account', 'Account::index');

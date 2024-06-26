@@ -15,29 +15,30 @@ class UserClientModel extends Model {
     protected $allowedFields = [
         'first_name',
         'last_name',
-        'company',
+        'company_name',
         'company_address',
         'website_url',
         'counties_worked',
         'work_type',
         'how_did_you_hear_about_us',
-        'email',
         'phone',
-        'password',
-        'verified',
-        'token',
-        'token_type',
-        'token_expires',
-        'status',
+    ];
+    protected array $casts = [
+        'counties_worked' => '?json-array',
+        'work_type'       => '?json-array',
     ];
 
-    //protected $dateFormat = 'datetime';
     protected $useTimestamps = true;
-    //protected $createdField = 'created_at';
-    //protected $updatedField = 'updated_at';
-    //protected $deletedField = 'deleted_at';
 
     protected $validationRules = [];
     protected $validationMessages = [];
     protected $skipValidation = false;
+
+
+    public function isUniquePhone(int $user_id, string $phone): bool {
+        $res = $this->where('id !=', $user_id)->where('phone', $phone)->first();
+
+        return $res === null;
+    }
+
 }

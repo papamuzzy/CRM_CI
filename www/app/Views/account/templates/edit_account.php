@@ -139,11 +139,11 @@
                 <div class="login_form_bi_f">
                     <div class="login_form_tt">
                         <div class="login_form_logo">
-                            <img src="<?= base_url("img/login-crtacc-logo.svg") ?>" title="Freedom Code Compliance - Create Account" width="175">
+                            <img src="<?= base_url("img/login-crtacc-logo.svg") ?>" title="Freedom Code Compliance - Edit Account" width="175">
                         </div>
                         <div class="login_form_tt_cn">
                             <div class="login_form_tt_n">
-                            <span>Create Account</span>
+                            <span>Edit Account</span>
                             </div>
                         </div>
                     </div><!-- .login_form_tt -->
@@ -161,8 +161,17 @@
                         <?= form_open($form_anchor, array('id' => 'form-login-create', 'class'=>'form_login_auth', 'autocomplete'=>'off')) ?>
                             <div class="row form_row">
                                 <div class="col form_col">
+                                    <label for="email" class="form-label">Email</label>
+                                    <input id="email" type="email" name="email" class="form-control form_input form_input_email <?= (!empty($validation['email']) ? 'inp_invalid' : '') ?>" placeholder="Email" aria-label="Email" maxlength="250" disabled<?= ((!empty($form_data['email'])) ? ' value="' . esc($form_data['email']) . '"' : '') ?>>
+                                    <?php if (!empty($validation['email'])) : ?>
+                                        <span class="inp_invalid invalid_cs_inp"><?= esc($validation['email']) ?></span>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                            <div class="row form_row">
+                                <div class="col form_col">
                                     <label for="first-name" class="form-label">First Name</label>
-                                    <input id="first-name" type="text" name="first_name" class="form-control form_input <?= (!empty($validation['first_name']) ? 'inp_invalid' : '') ?>" placeholder="First Name" aria-label="First Name" maxlength="150" disabled<?= ((!empty($form_data['first_name'])) ? ' value="' . esc($form_data['first_name']) . '"' : '') ?>>
+                                    <input id="first-name" type="text" name="first_name" class="form-control form_input <?= (!empty($validation['first_name']) ? 'inp_invalid' : '') ?>" placeholder="First Name" aria-label="First Name" maxlength="150" required<?= ((!empty($form_data['first_name'])) ? ' value="' . esc($form_data['first_name']) . '"' : '') ?>>
                                     <?php if (!empty($validation['first_name'])) : ?>
                                         <span class="inp_invalid invalid_cs_inp"><?= esc($validation['first_name']) ?></span>
                                     <?php endif; ?>
@@ -171,7 +180,7 @@
                             <div class="row form_row">
                                 <div class="col form_col">
                                     <label for="last-name" class="form-label">Last Name</label>
-                                    <input id="last-name" type="text" name="last_name" class="form-control form_input <?= (!empty($validation['last_name']) ? 'inp_invalid' : '') ?>" placeholder="Last Name" aria-label="Last Name" maxlength="150" disabled<?= ((!empty($form_data['last_name'])) ? ' value="' . esc($form_data['last_name']) . '"' : '') ?>>
+                                    <input id="last-name" type="text" name="last_name" class="form-control form_input <?= (!empty($validation['last_name']) ? 'inp_invalid' : '') ?>" placeholder="Last Name" aria-label="Last Name" maxlength="150" required<?= ((!empty($form_data['last_name'])) ? ' value="' . esc($form_data['last_name']) . '"' : '') ?>>
                                     <?php if (!empty($validation['last_name'])) : ?>
                                         <span class="inp_invalid invalid_cs_inp"><?= esc($validation['last_name']) ?></span>
                                     <?php endif; ?>
@@ -179,10 +188,10 @@
                             </div>
                             <div class="row form_row">
                                 <div class="col form_col">
-                                    <label for="email" class="form-label">Email</label>
-                                    <input id="email" type="email" name="email" class="form-control form_input form_input_email <?= (!empty($validation['email']) ? 'inp_invalid' : '') ?>" placeholder="Email" aria-label="Email" maxlength="250" disabled<?= ((!empty($form_data['email'])) ? ' value="' . esc($form_data['email']) . '"' : '') ?>>
-                                    <?php if (!empty($validation['email'])) : ?>
-                                        <span class="inp_invalid invalid_cs_inp"><?= esc($validation['email']) ?></span>
+                                    <label for="company-name" class="form-label">Company Name</label>
+                                    <input id="company-name" type="text" name="company_name" class="form-control form_input <?= (!empty($validation['company_name']) ? 'inp_invalid' : '') ?>" placeholder="Company Name" aria-label="Company Name" maxlength="300" required<?= ((!empty($form_data['company_name'])) ? ' value="' . esc($form_data['company_name']) . '"' : '') ?>>
+                                    <?php if (!empty($validation['company_name'])) : ?>
+                                        <span class="inp_invalid invalid_cs_inp"><?= esc($validation['company_name']) ?></span>
                                     <?php endif; ?>
                                 </div>
                             </div>
@@ -270,52 +279,13 @@
                                     <?php endif; ?>
                                 </div>
                             </div>
-                            <div class="row form_row">
-                                <div class="col form_col">
-                                    <label for="input-pass" class="form-label">Create New Password</label>
-                                    <span data-toggle="input-pass" class="span_ico_el toggle_password_icon toggle_password_icon_hd"></span>
-                                    <input type="password" id="input-pass" name="password" class="form-control form_input form_input_pass <?= (!empty($validation['password']) ? 'inp_invalid' : '') ?>" placeholder="Password" aria-label="Password" maxlength="50" pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}" title="Must contain at least one number and one uppercase and lowercase letter, and at least 8 or more characters" required value="">
-                                    <?php if (!empty($validation['password'])) : ?>
-                                        <span class="inp_invalid invalid_cs_inp"><?= esc($validation['password']) ?></span>
-                                    <?php endif; ?>
-                                </div>
-                            </div>
-                            <div class="row form_row">
-                                <div class="col form_col">
-                                    <label for="input-pass-confirm" class="form-label">Confirm Password </label>
-                                    <span data-toggle="input-pass-confirm" class="span_ico_el toggle_password_icon toggle_password_icon_hd"></span>
-                                    <input type="password" id="input-pass-confirm" name="confirm_password" class="form-control form_input form_input_pass <?= (!empty($validation['confirm_password']) ? 'inp_invalid' : '') ?>" placeholder="Confirm Password" aria-label="Confirm Password" maxlength="50" pattern="(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}" required value="">
-                                    <?php if (!empty($validation['confirm_password'])) : ?>
-                                        <span class="inp_invalid invalid_cs_inp"><?= esc($validation['confirm_password']) ?></span>
-                                    <?php endif; ?>
-                                </div>
-                            </div>
-
-                            <div class="row form_row">
-                                <div class="col form_col">
-                                    <div id="message-passw-check" class="message_passw_check">
-                                        <div class="message_passw_check_tt">
-                                            <span>Password must contain the following:</span>
-                                        </div>
-                                        <div class="message_passw_check_ds">
-                                            <span id="message-letter-check" class="message_passw_lbl message_passw_invalid">A lowercase letter</span>
-                                            <span id="message-capital-check" class="message_passw_lbl message_passw_invalid">A capital (uppercase) letter</span>
-                                            <span id="message-number-check" class="message_passw_lbl message_passw_invalid">A number</span>
-                                            <span id="message-length-check" class="message_passw_lbl message_passw_invalid">Minimum 8 characters</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
 
                             <div class="row form_row form_login_button">
                                 <div class="col form_col">
-                                    <button type="submit" class="btn btn-primary">Create Account</button>
+                                    <button type="submit" class="btn btn-primary">Save Account</button>
                                 </div>
                             </div>
                         <?= form_close() ?><!-- #form-login-create -->
-                        <div class="login_form_cslk">
-                            <span>By creating an account i agree to binance <a href="#">terms of service</a> and <a href="#">privacy policy</a></span>
-                        </div>
                         <?php else: ?>
                             <div class="data_not_found_msg">
                                 <span class="form_validation_msg_inp_invalid">Data not found</span>
@@ -327,7 +297,7 @@
         </div><!-- .login_form_fw -->
 
         <div class="login_copy login_copy_lw">
-          <?= $this->include('loginauth/includes/copylogin') ?> 
+          <?= $this->include('account/includes/copylogin') ?>
         </div>
     </div><!-- #login-page -->
 
@@ -398,111 +368,18 @@
                         required: true,
                         maxlength: 100
                     },
-                    password: {
-                        required: true,
-                        maxlength: 50
-                    },
-                    confirm_password: {
-                        equalTo: "#input-pass"
-                    }
                 },
                 submitHandler: function(form) {
-                    let validCheckSm = validListCheck();
+                    let validCheckSm = true;
 
                     if (validCheckSm) {
                         $(form).find('button[type="submit"] span').html("Submitting ...");
                         $(form).find('button[type="submit"]').prop("disabled", true);
                         form.submit();
-                    } else {
-                        $("#input-pass").focus();
-                    }                    
-                }
-            });
-
-            $(".toggle_password_icon").click(function() {
-                let inputPasss = $('#'+$(this).attr("data-toggle"));
-                
-                if (inputPasss.attr("type") == "password") {                    
-                    inputPasss.attr("type", "text");
-                    $(this).removeClass('toggle_password_icon_hd').addClass('toggle_password_icon_sh');
-                } else {
-                    inputPasss.attr("type", "password");
-                    $(this).removeClass('toggle_password_icon_sh').addClass('toggle_password_icon_hd');
+                    }
                 }
             });
         });
-
-        var inputPass = document.getElementById("input-pass");
-        var messageletter = document.getElementById("message-letter-check");
-        var messagecapital = document.getElementById("message-capital-check");
-        var messagenumber = document.getElementById("message-number-check");
-        var messagelength = document.getElementById("message-length-check");
-
-        inputPass.onfocus = function() {
-            document.getElementById("message-passw-check").style.opacity = "1";
-        }
-
-        inputPass.onblur = function() {
-            document.getElementById("message-passw-check").style.display = "0.7";
-        }
-
-        // When the user starts to type something inside the password field
-        inputPass.onkeyup = function() {
-            validListCheck();
-        }
-
-        function validListCheck() {
-            var validCheck = true;
-
-            // Validate lowercase letters
-            var lowerCaseLetters = /[a-z]/g;
-            if(inputPass.value.match(lowerCaseLetters)) {  
-                messageletter.classList.remove("message_passw_invalid");
-                messageletter.classList.add("message_passw_valid");
-            } else {
-                messageletter.classList.remove("message_passw_valid");
-                messageletter.classList.add("message_passw_invalid");
-
-                validCheck = false;
-            }
-            
-            // Validate capital letters
-            var upperCaseLetters = /[A-Z]/g;
-            if(inputPass.value.match(upperCaseLetters)) {  
-                messagecapital.classList.remove("message_passw_invalid");
-                messagecapital.classList.add("message_passw_valid");
-            } else {
-                messagecapital.classList.remove("message_passw_valid");
-                messagecapital.classList.add("message_passw_invalid");
-
-                validCheck = false;
-            }
-
-            // Validate numbers
-            var numbers = /[0-9]/g;
-            if(inputPass.value.match(numbers)) {  
-                messagenumber.classList.remove("message_passw_invalid");
-                messagenumber.classList.add("message_passw_valid");
-            } else {
-                messagenumber.classList.remove("message_passw_valid");
-                messagenumber.classList.add("message_passw_invalid");
-
-                validCheck = false;
-            }
-            
-            // Validate length
-            if(inputPass.value.length >= 8) {
-                messagelength.classList.remove("message_passw_invalid");
-                messagelength.classList.add("message_passw_valid");
-            } else {
-                messagelength.classList.remove("message_passw_valid");
-                messagelength.classList.add("message_passw_invalid");
-
-                validCheck = false;
-            }
-
-            return validCheck;
-        }
     </script>
 
 <?= $this->endSection() ?>
