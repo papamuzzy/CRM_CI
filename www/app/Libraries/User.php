@@ -144,11 +144,16 @@ class User {
 
     public function logout(): void {
         $data = [
-            'logged'        => false,
+            'logged' => false,
         ];
         $this->privateModel->update($this->id, $data);
 
-        $this->session->destroy();
+        $session_data = [
+            'user_id'    => 0,
+            'token'      => '',
+            'user_group' => 'client',
+        ];
+        $this->session->set($session_data);
         delete_cookie('token');
         $this->id = 0;
     }

@@ -1,6 +1,7 @@
 <?php namespace App\Controllers;
 
 use CodeIgniter\Cookie\Cookie;
+use CodeIgniter\HTTP\RedirectResponse;
 use DateTime;
 use CodeIgniter\HTTP\RequestInterface;
 use CodeIgniter\HTTP\ResponseInterface;
@@ -137,13 +138,10 @@ class Auth extends UserBaseController {
         ];
 
         if (!$this->user->isValid()) {
-            $session_data = [
-                'register_error' => ((!empty($this->user->getError())) ? $this->user->getError() : 'User Error empty, user Id = ' . $this->user->getId()),
-            ];
-            $this->session->setFlashdata($session_data);
-            $this->user->addErrorToLog('Registration Verify ' .
-                                       ((!empty($this->user->getError())) ? $this->user->getError() : 'User Error empty, user Id = ' . $this->user->getId()));
-            return redirect()->to('auth/register')->withCookies();
+            return $this->redirectTo('auth/register',
+                ((!empty($this->user->getError())) ? $this->user->getError() : 'User Error empty, user Id = ' . $this->user->getId()),
+                                     'Registration Verify'
+            );
         }
 
         $user = $this->user->getFullData();
@@ -176,6 +174,20 @@ class Auth extends UserBaseController {
         }
     }
 
+    private function redirectTo(string $route, $session_error = null, $log_error = null): RedirectResponse {
+        if (!empty($session_error)) {
+            $session_data = [
+                'register_error' => $session_error,
+            ];
+            $this->session->setFlashdata($session_data);
+        }
+        if (!empty($log_error)) {
+            $this->user->addErrorToLog($log_error . ' ' . $session_error);
+        }
+        $this->user->logout();
+        return redirect()->to($route)->withCookies();
+    }
+
     public function completeRegistration(): \CodeIgniter\HTTP\RedirectResponse|string {
         $data_page = [
             'title'       => lang('Loginauth.titleLoginCreate') . " - " . lang('Loginauth.defSignTitle'),
@@ -184,13 +196,10 @@ class Auth extends UserBaseController {
         ];
 
         if (!$this->user->isValid()) {
-            $session_data = [
-                'register_error' => ((!empty($this->user->getError())) ? $this->user->getError() : 'User Error empty, user Id = ' . $this->user->getId()),
-            ];
-            $this->session->setFlashdata($session_data);
-            $this->user->addErrorToLog('Registration Verify complete ' .
-                                       ((!empty($this->user->getError())) ? $this->user->getError() : 'User Error empty, user Id = ' . $this->user->getId()));
-            return redirect()->to('auth/register')->withCookies();
+            return $this->redirectTo('auth/register',
+                ((!empty($this->user->getError())) ? $this->user->getError() : 'User Error empty, user Id = ' . $this->user->getId()),
+                                     'Registration Verify complete'
+            );
         }
 
         $user = $this->user->getFullData();
@@ -238,24 +247,19 @@ class Auth extends UserBaseController {
                 return redirect()->to('welcome')->withCookies();
             }
         } else {
-            $session_data = [
-                'register_error' => 'Invalid or expired verification code.',
-            ];
-            $this->session->setFlashdata($session_data);
-            $this->user->addErrorToLog('Registration Verify complete Invalid or expired verification code');
-            return redirect()->to('auth/register')->withCookies();
+            return $this->redirectTo('auth/register',
+                                     'Invalid or expired verification code.',
+                                     'Registration Verify complete');
         }
     }
 
     public function welcome(): \CodeIgniter\HTTP\RedirectResponse|string {
         if (!$this->user->isValid()) {
-            $session_data = [
-                'register_error' => ((!empty($this->user->getError())) ? $this->user->getError() : 'User Error empty, user Id = ' . $this->user->getId()),
-            ];
-            $this->session->setFlashdata($session_data);
-            $this->user->addErrorToLog('Registration Verify complete ' .
-                                       ((!empty($this->user->getError())) ? $this->user->getError() : 'User Error empty, user Id = ' . $this->user->getId()));
-            return redirect()->to('auth/register')->withCookies();
+            return $this->redirectTo('auth/register',
+                ((!empty($this->user->getError())) ? $this->user->getError() : 'User Error empty, user Id = ' . $this->user->getId()),
+                                     'Registration Verify complete ' .
+                                     ((!empty($this->user->getError())) ? $this->user->getError() : 'User Error empty, user Id = ' . $this->user->getId())
+            );
         }
 
         return view('welcome');
@@ -404,11 +408,10 @@ class Auth extends UserBaseController {
         // ні деінде ще не використовується, навіщо його додатково валідувати?
 
         if (!$this->user->isValid()) {
-            $session_data = [
-                'register_error' => ((!empty($this->user->getError())) ? $this->user->getError() : 'User Error empty, user Id = ' . $this->user->getId()),
-            ];
-            $this->session->setFlashdata($session_data);
-            return redirect()->to('auth/password-reset')->withCookies();
+            return $this->redirectTo('auth/password-reset',
+                ((!empty($this->user->getError())) ? $this->user->getError() : 'User Error empty, user Id = ' . $this->user->getId()),
+                                     'Password Verify'
+            );
         }
 
         $data_page = [
@@ -422,11 +425,7 @@ class Auth extends UserBaseController {
         if ($user && time() < $user['verification_code_expires'] && $user['verification_code'] === $verification_code) {
             return view('loginauth/templates/reset_password', $data_page);
         } else {
-            $session_data = [
-                'register_error' => 'Invalid or expired reset code.',
-            ];
-            $this->session->setFlashdata($session_data);
-            return redirect()->to('auth/auth/password-reset')->withCookies();
+            return $this->redirectTo('auth/password-reset', 'Invalid or expired reset code.', 'Password Verify');
         }
     }
 
@@ -441,11 +440,10 @@ class Auth extends UserBaseController {
         ];
 
         if (!$this->user->isValid()) {
-            $session_data = [
-                'register_error' => ((!empty($this->user->getError())) ? $this->user->getError() : 'User Error empty, user Id = ' . $this->user->getId()),
-            ];
-            $this->session->setFlashdata($session_data);
-            return redirect()->to('auth/password-reset')->withCookies();
+            return $this->redirectTo('auth/password-reset',
+                ((!empty($this->user->getError())) ? $this->user->getError() : 'User Error empty, user Id = ' . $this->user->getId()),
+                                     'Password Verify'
+            );
         }
 
         // TODO: Потрібна валідація
@@ -476,11 +474,10 @@ class Auth extends UserBaseController {
                 return view('loginauth/templates/reset_password', $data_page);
             }
         } else {
-            $session_data = [
-                'register_error' => 'Invalid or expired reset code.',
-            ];
-            $this->session->setFlashdata($session_data);
-            return redirect()->to('auth/auth/password-reset')->withCookies();
+            return $this->redirectTo('auth/auth/password-reset',
+                                     'Invalid or expired reset code.',
+                                     'Password Reset Error'
+            );
         }
     }
 }
