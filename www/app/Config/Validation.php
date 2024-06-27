@@ -298,4 +298,24 @@ class Validation extends BaseConfig {
             ],
         ],
     ];
+
+    public array $change_password = [
+        'password'         => [
+            'rules'  => 'required|min_length[8]|max_length[15]',
+            'errors' => [
+                'required'   => 'Password is required',
+                'min_length' => 'Password must be at least 8 characters long',
+                'max_length' => 'Password cannot exceed 15 characters',
+            ],
+        ],
+        'confirm_password' => [
+            'rules'  => 'required|min_length[8]|max_length[15]|matches[password]',
+            'errors' => [
+                'required'   => 'Confirm Password is required',
+                'min_length' => 'Confirm Password must be at least 8 characters long',
+                'max_length' => 'Confirm Password cannot exceed 15 characters',
+                'matches'    => 'Confirm Password does not match with Password',
+            ],
+        ],
+    ];
 }

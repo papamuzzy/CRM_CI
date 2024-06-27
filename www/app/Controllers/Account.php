@@ -27,11 +27,10 @@ class Account extends UserBaseController {
             $session_data = [
                 'register_error' => ((!empty($this->user->getError())) ? $this->user->getError() : 'User Error empty, user Id = ' . $this->user->getId()),
             ];
-            $this->session->markAsFlashdata('register_error');
-            $this->session->set($session_data);
+            $this->session->setFlashdata($session_data);
             $this->user->addErrorToLog('Registration Verify ' .
                                        ((!empty($this->user->getError())) ? $this->user->getError() : 'User Error empty, user Id = ' . $this->user->getId()));
-            return redirect()->to('auth/register')->withCookies();
+            return redirect()->to('auth/login')->withCookies();
         }
 
         $data_page = [
@@ -88,7 +87,57 @@ class Account extends UserBaseController {
         }
     }
 
-    public function changePassword() {
+    public function changePassword(): string|\CodeIgniter\HTTP\RedirectResponse {
+        if (!$this->user->isValid()) {
+            $session_data = [
+                'register_error' => ((!empty($this->user->getError())) ? $this->user->getError() : 'User Error empty, user Id = ' . $this->user->getId()),
+            ];
+            $this->session->setFlashdata($session_data);
+            $this->user->addErrorToLog('Registration Verify ' .
+                                       ((!empty($this->user->getError())) ? $this->user->getError() : 'User Error empty, user Id = ' . $this->user->getId()));
+            return redirect()->to('auth/login')->withCookies();
+        }
 
+        $data_page = [
+            'title'       => lang('Account.titleChangePassword') . " - " . lang('Account.defSignTitle'),
+            'description' => lang('Account.descriptionChangePassword') . " - " . lang('Account..defSignTitle'),
+            'form_anchor' => base_url('account/password'),
+        ];
+
+        $user = $this->user->getFullData();
+        $data_page['form_data'] = $user;
+
+        if (!$this->request->is('post')) {
+            return view('account/templates/edit_password', $data_page);
+        }
+
+        $get_form_post = $this->request->getPost(null, FILTER_SANITIZE_FULL_SPECIAL_CHARS);
+
+        if (!$this->validateData($get_form_post, 'change_password')) {
+            $data_page['validation'] = $this->validator->getErrors();
+            $data_page['form_data'] = $get_form_post;
+            $this->user->addErrorToLog('Change Password Validation error');
+            return view('account/templates/edit_password', $data_page);
+        } else {
+            $get_form_post = $this->validator->getValidated();
+
+            if (empty($get_form_post) or !is_array($get_form_post)) {
+                $data_page['error'] = 'Data not found, try again.';
+                $this->user->addErrorToLog('Edit Account Data not found');
+                return view('account/templates/edit_password', $data_page);
+            }
+            if ($get_form_post['password'] === $get_form_post['confirm_password']) {
+                $this->userPrivateModel->update($user['id'], [
+                    'password' => password_hash($get_form_post['password'], PASSWORD_BCRYPT),
+                ]);
+                $this->userPrivateModel->updateToken($user['id']);
+                $this->user->load($user['id']);
+
+                return redirect()->to('account')->withCookies();
+            } else {
+                $data_page['error'] = 'Password does not match';
+                return view('account/templates/edit_password', $data_page);
+            }
+        }
     }
 }
