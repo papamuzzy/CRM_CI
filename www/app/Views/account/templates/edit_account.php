@@ -148,6 +148,8 @@
                         </div>
                     </div><!-- .login_form_tt -->
 
+                    <div><a href="/changepassword">Change Password</a></div>
+
                     <?php if (!empty($error) and is_string($error)): ?>
                         <div class="form_validation_msg">
                             <div class="form_validation_msg_ls form_validation_msg_ls_error">

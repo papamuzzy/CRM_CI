@@ -53,8 +53,8 @@ class User {
      */
     private function checkSession(): void {
         $this->sessionError = null;
-        $user_id = $this->session->get('user_id');
-        if ($user_id === null) {
+        $user_id = (int)$this->session->get('user_id');
+        if (empty($user_id)) {
             $this->sessionError = 'Session empty.';
             return;
         }

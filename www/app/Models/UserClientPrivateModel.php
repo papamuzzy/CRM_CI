@@ -62,12 +62,12 @@ class UserClientPrivateModel extends Model {
     public function createUser(string $email): array|object|null {
         do {
             $verification_code = md5(rand());
-            $res = $this->where('verification_code', $verification_code)->first();
-        } while ($res !== null);
+            $count = $this->where('verification_code', $verification_code)->countAllResults();
+        } while (!empty($count));
         do {
             $token = md5(rand());
-            $res = $this->where('token', $token)->first();
-        } while ($res !== null);
+            $count = $this->where('token', $token)->countAllResults();
+        } while (!empty($count));
 
         $data = [
             'email'                     => $email,
@@ -103,8 +103,8 @@ class UserClientPrivateModel extends Model {
         } else {
             do {
                 $verification_code = md5(rand());
-                $res = $this->where('verification_code', $verification_code)->first();
-            } while ($res !== null);
+                $count = $this->where('verification_code', $verification_code)->countAllResults();
+            } while (!empty($count));
         }
 
         $data = [
@@ -154,9 +154,9 @@ class UserClientPrivateModel extends Model {
     }
 
     public function isUniqueEmail(string $email): bool {
-        $res = $this->where('verified', 1)->where('email', $email)->first();
+        $res = $this->where('verified', true)->where('email', $email)->countAllResults();
 
-        return $res === null;
+        return empty($res);
     }
 
     public function isLogged(int $user_id): bool {

@@ -69,7 +69,7 @@ class Auth extends UserBaseController {
             }
 
             $user = $this->userPrivateModel->where('email', $get_form_post['email'])->where('verified', 0)->first();
-            if ($user === null) {
+            if (empty($user)) {
                 $user = $this->userPrivateModel->createUser($get_form_post['email']);
             } else {
                 $user = $this->userPrivateModel->updateVerificationCode($user['id']);
@@ -480,5 +480,55 @@ class Auth extends UserBaseController {
             );
         }
     }
-}
 
+    public function testEmail(): string {
+        $emailService = \Config\Services::email();
+        //$emailService->clear(true);
+
+        $message = 'This is a test email';
+
+        $emailService->setTo('papamuzzy@gmail.com');
+        $emailService->setSubject('Test email');
+        $emailService->setMessage($message);
+
+        $emailServiceObj = $emailService->setPriority();
+
+        $emailService->send(false);
+
+        /*$emailService = \Config\Services::email();
+        $emailService->clear(true);
+
+        $configemail['SMTPHost'] = 'mail.adm.tools';
+        $configemail['SMTPUser'] = 'fbccm@web-dev-project.com';
+        $configemail['SMTPPass'] = '6AnSnC3v52';
+        $configemail['SMTPPort'] = 465;
+        $configemail['SMTPTimeout'] = 30;
+        $configemail['mailType'] = 'html';
+        $configemail['validate'] = true;
+        $configemail['priority'] = 3;
+        $configemail['SMTPKeepAlive'] = false;
+        $configemail['SMTPCrypto'] = 'ssl';
+
+        $emailService->initialize($configemail);
+
+        $message = '
+            <p>Hi ' . ucwords(strtolower('Andrew')) . '</p>
+            <p>Complete verification and continue registration, confirm your email address. <a href="' . base_url('auth/verify/') . '">Click this link to continue</a>.</p>
+        ';
+
+        $emailService->setFrom('fbccm@web-dev-project.com', 'FcCM test');
+        $emailService->setTo('papamuzzy@gmail.com');
+
+        $emailService->setSubject('Email Verification');
+        $emailService->setMessage($message);
+
+        $emailServiceObj = $emailService->setPriority();
+
+        $emailService->send(false);*/
+
+        $archive = $emailService->archive;
+        //$data['email_debug'] = 'archive' . PHP_EOL . var_export($archive, true) . PHP_EOL . PHP_EOL . 'emailServiceObj' . PHP_EOL . var_export($emailServiceObj,true) . PHP_EOL . PHP_EOL . 'debug' . PHP_EOL . $emailService->printDebugger();
+        $data['email_debug'] = 'emailServiceObj' . PHP_EOL . var_export($emailServiceObj,true) . PHP_EOL . PHP_EOL . 'debug' . PHP_EOL . $emailService->printDebugger();
+        return view('test_email', $data);
+    }
+}

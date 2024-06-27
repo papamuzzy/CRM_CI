@@ -32,3 +32,8 @@ $routes->get('welcome', 'Auth::welcome');
 // Account
 $routes->get('account', 'Account::index');
 $routes->post('account', 'Account::index');
+$routes->get('changepassword', 'Account::changePassword');
+$routes->post('changepassword', 'Account::changePassword');
+
+// Test
+$routes->get('test-email', 'Auth::testEmail');

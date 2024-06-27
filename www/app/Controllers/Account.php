@@ -87,4 +87,8 @@ class Account extends UserBaseController {
             return redirect()->to('welcome')->withCookies();
         }
     }
+
+    public function changePassword() {
+
+    }
 }
